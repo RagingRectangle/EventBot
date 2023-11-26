@@ -1,0 +1,32 @@
+{
+  "name": "pogoevents",
+  "version": "1.0.0",
+  "description": "",
+  "main": "events.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RagingRectangle/PoGoEvents.git"
+  },
+  "author": "RagingRectangle",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RagingRectangle/PoGoEvents/issues"
+  },
+  "homepage": "https://github.com/RagingRectangle/PoGoEvents#readme",
+  "dependencies": {
+    "@discordjs/rest": "1.1.0",
+    "cheerio": "^1.0.0-rc.12",
+    "discord-api-types": "0.36.2",
+    "discord.js": "14.13.0",
+    "fs": "0.0.1-security",
+    "lodash": "^4.17.21",
+    "lodash.chunk": "^4.2.0",
+    "moment-timezone": "^0.5.43",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^2.6.12",
+    "node-schedule": "^2.1.1"
+  }
+}
