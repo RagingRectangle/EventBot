@@ -229,7 +229,7 @@ async function scrapeLinks(client, eventLinks) {
   var futureDescriptionOther = ['## **__Other Upcoming Events:__**'];
   for (var f in futureEventsOther) {
     //Unannounced
-    if (futureEventsOther[f]['name'].includes('??? Event')) {
+    if (futureEventsOther[f]['name'].includes('Unannounced Event')) {
       futureDescriptionOther.push(`[${futureEventsOther[f]['name']}](${futureEventsOther[f]['link']})`);
     } else {
       futureDescriptionOther.push(`[${futureEventsOther[f]['name']}](${futureEventsOther[f]['link']})\n- Starts ${futureEventsOther[f]['startText']} <t:${futureEventsOther[f]['startTimeUnix']}:R>\n- Ends ${futureEventsOther[f]['endText']} <t:${futureEventsOther[f]['endTimeUnix']}:R>`);
@@ -286,25 +286,26 @@ async function createEmbeds() {
     var currentEmbed = new EmbedBuilder()
       .setColor(config.colors.current)
       .setDescription(eventJSON.current.length == 1 ? 'N/A' : eventJSON.current.join('\n\n'));
-
+    embeds.push(currentEmbed);
     var futureCDEmbed = new EmbedBuilder()
       .setColor(config.colors.futureCD)
       .setDescription(eventJSON.futureCD.length == 1 ? 'N/A' : eventJSON.futureCD.join('\n\n'));
-
+    embeds.push(futureCDEmbed);
     var futureRaidEmbed = new EmbedBuilder()
       .setColor(config.colors.futureRaid)
       .setDescription(eventJSON.futureRaid.length == 1 ? 'N/A' : eventJSON.futureRaid.join('\n\n'));
-
+    embeds.push(futureRaidEmbed);
     var futureSpotCaseEmbed = new EmbedBuilder()
       .setColor(config.colors.futureSpotCase)
       .setDescription(eventJSON.futureSpotCase.length == 1 ? 'N/A' : eventJSON.futureSpotCase.join('\n\n'));
-
+    embeds.push(futureSpotCaseEmbed);
     var futureOtherEmbed = new EmbedBuilder()
       .setColor(config.colors.futureOther)
-      .setDescription(eventJSON.futureOther.length == 1 ? 'N/A' : eventJSON.futureOther.join('\n\n'))
+      .setDescription(eventJSON.futureOther.join('\n\n'))
       .setTimestamp();
-    embeds = [currentEmbed, futureCDEmbed, futureRaidEmbed, futureSpotCaseEmbed, futureOtherEmbed]
-
+    if (eventJSON.futureOther.length > 1) {
+      embeds.push(futureOtherEmbed);
+    }
     return embeds;
   } catch (err) {
     console.log(err);
