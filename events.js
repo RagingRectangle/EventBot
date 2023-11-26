@@ -36,9 +36,7 @@ client.on('ready', async () => {
     console.log(err);
   }
   //Register Slash Commands
-  if (config.registerCommand == true){
-    SlashRegistry.registerCommands(client, config);
-  }
+  SlashRegistry.registerCommands(client, config);
 }); //End of ready()
 
 
@@ -127,7 +125,7 @@ async function scrapeLinks(client, eventLinks) {
         continue;
       }
       //Check skipping unannounced
-      else if (config.ignoreUnannounced == true && event.name.includes('Unannounced')){
+      else if (config.ignoreUnannounced == true && event.name.includes('Unannounced')) {
         continue;
       }
       //Current events
@@ -320,7 +318,7 @@ client.on('interactionCreate', async interaction => {
   if (interaction.type !== InteractionType.ApplicationCommand) {
     return;
   }
-  if (interaction.applicationId != client.user.id){
+  if (interaction.applicationId != client.user.id) {
     return;
   }
   let user = interaction.user;
