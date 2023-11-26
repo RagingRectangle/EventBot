@@ -1,11 +1,8 @@
 {
-  "token": "NTMzMzM2MTQ1MDIzNDY3NTMy.GL12mJ.n3w_4Nb0Pbt577i8VQdEGl0RpJ3gTHGf2wKAVQ",
-  "timezoneOffset": -5,
-  "emojiID": "582739528104673290",
+  "token": "",
+  "timezoneOffset": 0,
+  "emojiID": "",
   "buttonLabel": "Update Events",
-  "eventTypesAll": ["Pokémon Spotlight Hour", "Raid Battles", "Event", "Community Day", "Season", "Raid Hour", "PokéStop Showcase", "Raid Day"],
-  "eventTypesRaid": ["Raid Battles", "Raid Hour", "Raid Day"],
-  "eventTypesSpotCase": ["Pokémon Spotlight Hour", "PokéStop Showcase"],
   "ignoreUnknown": false,
   "colors": {
     "current": "048900",
@@ -27,5 +24,8 @@
     "October": 2024,
     "November": 2023,
     "December": 2023
-  }
+  },
+  "eventTypesAll": ["Pokémon Spotlight Hour", "Raid Battles", "Event", "Community Day", "Season", "Raid Hour", "PokéStop Showcase", "Raid Day"],
+  "eventTypesRaid": ["Raid Battles", "Raid Hour", "Raid Day"],
+  "eventTypesSpotCase": ["Pokémon Spotlight Hour", "PokéStop Showcase"]
 }
