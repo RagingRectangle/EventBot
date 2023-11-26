@@ -336,7 +336,10 @@ client.on('interactionCreate', async interaction => {
       if (eventEmbeds == []) {
         return;
       }
-      let eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary).setEmoji(config.emojiID));
+      var eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary));
+      if (config.emojiID) {
+        eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary).setEmoji(config.emojiID));
+      }
       await interaction.editReply({
         embeds: eventEmbeds,
         components: [eventComponent]

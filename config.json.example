@@ -3,7 +3,7 @@
   "timezoneOffset": 0,
   "emojiID": "",
   "buttonLabel": "Update Events",
-  "ignoreUnknown": false,
+  "ignoreUnannounced": false,
   "colors": {
     "current": "048900",
     "futureCD": "2A47FF",
