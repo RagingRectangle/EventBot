@@ -285,19 +285,19 @@ async function createEmbeds() {
     var eventJSON = JSON.parse(fs.readFileSync('./events.json'));
     var currentEmbed = new EmbedBuilder()
       .setColor(config.colors.current)
-      .setDescription(eventJSON.current.length == 1 ? 'N/A' : eventJSON.current.join('\n\n'));
+      .setDescription(eventJSON.current.length == 1 ? `${eventJSON.current[0]}\n\nN/A` : eventJSON.current.join('\n\n'));
     embeds.push(currentEmbed);
     var futureCDEmbed = new EmbedBuilder()
       .setColor(config.colors.futureCD)
-      .setDescription(eventJSON.futureCD.length == 1 ? 'N/A' : eventJSON.futureCD.join('\n\n'));
+      .setDescription(eventJSON.futureCD.length == 1 ? `${eventJSON.futureCD[0]}\n\nN/A` : eventJSON.futureCD.join('\n\n'));
     embeds.push(futureCDEmbed);
     var futureRaidEmbed = new EmbedBuilder()
       .setColor(config.colors.futureRaid)
-      .setDescription(eventJSON.futureRaid.length == 1 ? 'N/A' : eventJSON.futureRaid.join('\n\n'));
+      .setDescription(eventJSON.futureRaid.length == 1 ? `${eventJSON.futureRaid[0]}\n\nN/A` : eventJSON.futureRaid.join('\n\n'));
     embeds.push(futureRaidEmbed);
     var futureSpotCaseEmbed = new EmbedBuilder()
       .setColor(config.colors.futureSpotCase)
-      .setDescription(eventJSON.futureSpotCase.length == 1 ? 'N/A' : eventJSON.futureSpotCase.join('\n\n'));
+      .setDescription(eventJSON.futureSpotCase.length == 1 ? `${eventJSON.futureSpotCase[0]}\n\nN/A` : eventJSON.futureSpotCase.join('\n\n'));
     embeds.push(futureSpotCaseEmbed);
     var futureOtherEmbed = new EmbedBuilder()
       .setColor(config.colors.futureOther)
@@ -330,7 +330,7 @@ client.on('interactionCreate', async interaction => {
   if (!command) {
     return;
   }
-  await interaction.deferReply();
+  await interaction.deferReply().catch(console.error);
   if (interaction.commandName == 'events') {
     try {
       let eventEmbeds = await createEmbeds();
