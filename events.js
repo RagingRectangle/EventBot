@@ -23,14 +23,18 @@ const schedule = require('node-schedule');
 const SlashRegistry = require("./slashRegistry.js");
 var config = require('./config.json');
 
+//Auto update check
+if (config.autoUpdate == true && !fs.existsSync('./autoUpdates.json')) {
+  fs.writeFileSync('./autoUpdates.json', '{}');
+}
 
 client.on('ready', async () => {
   console.log("EventBot Logged In");
-  fetchLeekEvents(client);
+  fetchLeekEvents(client, 'boot');
   //Update events cron
   try {
-    const cronJob = schedule.scheduleJob('eventCron', '0 * * * *', function () {
-      fetchLeekEvents(client);
+    const cronJob = schedule.scheduleJob('eventCron', '40 * * * *', function () {
+      fetchLeekEvents(client, 'cron');
     });
   } catch (err) {
     console.log(err);
@@ -40,7 +44,7 @@ client.on('ready', async () => {
 }); //End of ready()
 
 
-async function fetchLeekEvents(client) {
+async function fetchLeekEvents(client, type) {
   try {
     const response = await fetch('https://leekduck.com/events/');
     const body = await response.text();
@@ -56,14 +60,14 @@ async function fetchLeekEvents(client) {
         });
       }
     });
-    scrapeLinks(client, eventLinks)
+    scrapeLinks(client, eventLinks, type)
   } catch (err) {
     console.log(err);
   }
 } //End of fetchLeekEvents()
 
 
-async function scrapeLinks(client, eventLinks) {
+async function scrapeLinks(client, eventLinks, type) {
   var currentEventsTemp = [];
   var futureEventsCDTemp = [];
   var futureEventsRaidTemp = [];
@@ -244,7 +248,41 @@ async function scrapeLinks(client, eventLinks) {
     futureOther: futureDescriptionOther
   }
   fs.writeFileSync('./events.json', JSON.stringify(eventObj));
+
+  //Auto updates
+  if (type == 'cron' && config.autoUpdate == true) {
+    cronUpdates();
+  }
 } //End of scrapeLinks()
+
+
+async function cronUpdates() {
+  let eventEmbeds = await createEmbeds();
+  if (eventEmbeds == []) {
+    return;
+  }
+  var autoMessages = JSON.parse(fs.readFileSync('./autoUpdates.json'));
+  for (const [msgID, channelID] of Object.entries(autoMessages)) {
+    try {
+      let channel = await client.channels.fetch(channelID).catch(console.error);
+      let message = await channel.messages.fetch(msgID);
+      var eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary));
+      if (config.emojiID) {
+        eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary).setEmoji(config.emojiID));
+      }
+      var components = [eventComponent];
+      if (config.autoUpdate == true && config.hideUpdateButton == true) {
+        components = [];
+      }
+      message.edit({
+        embeds: eventEmbeds,
+        components: components
+      }).catch(console.error);
+    } catch (err) {
+      console.log(err);
+    }
+  } //End of message loop
+} //End of cronUpdates()
 
 
 //Buttons and Lists
@@ -274,8 +312,18 @@ client.on('interactionCreate', async interaction => {
     } catch (err) {
       console.log(err);
     }
+    await interaction.deleteReply().catch(console.error);
+
+    //Check auto update
+    if (config.autoUpdate == true) {
+      var autoMessages = JSON.parse(fs.readFileSync('./autoUpdates.json'));
+      //New auto update
+      if (!autoMessages[interaction.message.id]) {
+        autoMessages[interaction.message.id] = interaction.message.channel.id;
+        fs.writeFileSync('./autoUpdates.json', JSON.stringify(autoMessages));
+      }
+    }
   }
-  await interaction.deleteReply().catch(console.error);
 }); //End of buttons/lists
 
 
@@ -341,9 +389,13 @@ client.on('interactionCreate', async interaction => {
       if (config.emojiID) {
         eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary).setEmoji(config.emojiID));
       }
+      var components = [eventComponent];
+      if (config.autoUpdate == true && config.hideUpdateButton == true) {
+        components = [];
+      }
       await interaction.editReply({
         embeds: eventEmbeds,
-        components: [eventComponent]
+        components: components
       }).catch(console.error);
     } catch (error) {
       console.error(error);

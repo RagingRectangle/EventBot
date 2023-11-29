@@ -4,6 +4,8 @@
   "emojiID": "",
   "buttonLabel": "Update Events",
   "ignoreUnannounced": false,
+  "autoUpdate": false,
+  "hideUpdateButton": false,
   "colors": {
     "current": "048900",
     "futureCD": "2A47FF",

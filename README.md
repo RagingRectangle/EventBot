@@ -29,6 +29,10 @@ npm install
 
 **ignoreUnannounced:** Whether unannounced events are shown or not.
 
+**autoUpdate:** Update message automatically.
+
+**hideUpdateButton:** Hide button if autoUpdate = true.
+
 **colors:** Hex codes for embed colors.
 
 **months:** Years aren't included when scraping so this was my lazy solution. Will just need to update them every once in awhile.

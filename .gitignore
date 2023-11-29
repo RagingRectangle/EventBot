@@ -1,4 +1,6 @@
 
 node_modules/
 config.json
+autoUpdates.json
+events.json
 package-lock.json
