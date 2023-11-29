@@ -29,9 +29,9 @@ npm install
 
 **ignoreUnannounced:** Whether unannounced events are shown or not.
 
-**autoUpdate:** Update message automatically.
+**autoUpdate:** Update message automatically. Must press the update button 1 time to activate.
 
-**hideUpdateButton:** Hide button if autoUpdate = true.
+**hideUpdateButton:** Hide button if autoUpdate = true (Will hide after 1st press).
 
 **colors:** Hex codes for embed colors.
 
