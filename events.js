@@ -33,7 +33,7 @@ client.on('ready', async () => {
   fetchLeekEvents(client, 'boot');
   //Update events cron
   try {
-    const cronJob = schedule.scheduleJob('eventCron', '40 * * * *', function () {
+    const cronJob = schedule.scheduleJob('eventCron', '0 * * * *', function () {
       fetchLeekEvents(client, 'cron');
     });
   } catch (err) {
