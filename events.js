@@ -306,9 +306,17 @@ client.on('interactionCreate', async interaction => {
       if (eventEmbeds == []) {
         return;
       }
-      await interaction.message.edit({
-        embeds: eventEmbeds
-      }).catch(console.error);
+      if (config.autoUpdate == true && config.hideUpdateButton == true){
+        await interaction.message.edit({
+          embeds: eventEmbeds,
+          components: []
+        }).catch(console.error);
+      }
+      else {
+        await interaction.message.edit({
+          embeds: eventEmbeds
+        }).catch(console.error);
+      }
     } catch (err) {
       console.log(err);
     }
@@ -390,9 +398,6 @@ client.on('interactionCreate', async interaction => {
         eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary).setEmoji(config.emojiID));
       }
       var components = [eventComponent];
-      if (config.autoUpdate == true && config.hideUpdateButton == true) {
-        components = [];
-      }
       await interaction.editReply({
         embeds: eventEmbeds,
         components: components
