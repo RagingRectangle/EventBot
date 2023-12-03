@@ -21,7 +21,7 @@ npm install
 ## Config Setup
 **Token:** Discord token used for Poracle bot.
 
-**timezoneOffset:** Only used for the last updated date in the footer.
+**timezoneOffset:** Also used for the last updated date in the footer.
 
 **emojiID:** ID of an emoji if you want it included in the button.
 

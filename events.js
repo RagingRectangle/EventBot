@@ -104,16 +104,24 @@ async function scrapeLinks(client, eventLinks, type) {
       let endDateSplit = $('#event-date-end').text().replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
       endDateSplit = endDateSplit.filter(a => a);
       //[ '6', 'PM', 'Local Time' ]
-      let endTimeSplit = $('#event-time-end').text().replace('at', '').replace(':00', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
+      let endTimeSplit = $('#event-time-end').text().replace('at', '').replace(':00', '').replace(':59', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
       endTimeSplit = endTimeSplit.filter(a => a);
       var endHour = endTimeSplit[0] * 1;
       if (endTimeSplit[1] == 'PM') {
         endHour = endHour + 12;
       }
+      if ($('#event-time-end').text().includes(':59')) {
+        endHour = `${endHour}:59`;
+      } else {
+        endHour = `${endHour}:00`;
+      }
       //6 Mar 2017 21:22:23 GMT
-      let endTimeUnix = moment(`${endDateSplit[2]} ${endDateSplit[1].slice(0,3)} ${config.months[endDateSplit[1]]} ${endHour}:00 GMT`).subtract(config.timezoneOffset, 'hours').format('X');
+      let endTimeUnix = moment(`${endDateSplit[2]} ${endDateSplit[1].slice(0,3)} ${config.months[endDateSplit[1]]} ${endHour} GMT`).subtract(config.timezoneOffset, 'hours').format('X');
       let hoursUntilEnd = (endTimeUnix - moment(new Date()).format('X')) / 60 / 60;
-      let endText = `${endDateSplit[0].slice(0,3)}, ${endDateSplit[1].slice(0,3)} ${endDateSplit[2]} @ ${endTimeSplit[0]} ${endTimeSplit[1]}`;
+      var endText = `${endDateSplit[0].slice(0,3)}, ${endDateSplit[1].slice(0,3)} ${endDateSplit[2]} @ ${endTimeSplit[0]} ${endTimeSplit[1]}`;
+      if ($('#event-time-end').text().includes(':59')) {
+        endText = `${endDateSplit[0].slice(0,3)}, ${endDateSplit[1].slice(0,3)} ${endDateSplit[2]} @ ${endTimeSplit[0]}:59 ${endTimeSplit[1]}`;
+      }
 
       let event = {
         "name": name.replaceAll(' ', ' ').replace('PokéStop Showcases', 'Showcases').replace('5-star Raid Battles', '5* Raids').replace('in Shadow Raids', 'Raids').replace('in Mega Raids', 'Raids').replace('Community Day', 'CD'),
@@ -306,13 +314,12 @@ client.on('interactionCreate', async interaction => {
       if (eventEmbeds == []) {
         return;
       }
-      if (config.autoUpdate == true && config.hideUpdateButton == true){
+      if (config.autoUpdate == true && config.hideUpdateButton == true) {
         await interaction.message.edit({
           embeds: eventEmbeds,
           components: []
         }).catch(console.error);
-      }
-      else {
+      } else {
         await interaction.message.edit({
           embeds: eventEmbeds
         }).catch(console.error);
