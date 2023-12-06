@@ -23,7 +23,8 @@ const schedule = require('node-schedule');
 const SlashRegistry = require("./slashRegistry.js");
 var config = require('./config.json');
 var util = require('./util.json');
-var emojiList = '';
+var emojiList = {};
+var shinyList = require('./shinyList.json');
 var trashServer = '';
 
 //Auto update check
@@ -40,11 +41,11 @@ emojiList = JSON.parse(fs.readFileSync('./emojis.json'));
 
 client.on('ready', async () => {
   console.log("EventBot Logged In");
-  fetchLeekEvents(client);
+  fetchShinyList(client);
   //Fetch new events cron
   try {
     const fetchEventsJob = schedule.scheduleJob('fetchEventsJob', '55 * * * *', function () {
-      fetchLeekEvents(client);
+      fetchShinyList(client);
     });
   } catch (err) {
     console.log(err);
@@ -74,6 +75,24 @@ client.on('ready', async () => {
     }
   }
 }); //End of ready()
+
+
+async function fetchShinyList(client) {
+  try {
+    fetch('https://raw.githubusercontent.com/jms412/PkmnShinyMap/main/shinyPossible.json', {
+        method: "Get"
+      })
+      .then(res => res.json())
+      .then((json) => {
+        shinyList = json.map;
+        fetchLeekEvents(client);
+        fs.writeFileSync('./shinyList.json', JSON.stringify(json.map));
+      });
+  } catch (err) {
+    console.log(`Failed to fetch new shiny list: ${err}`);
+    fetchLeekEvents(client);
+  }
+} //End of fetchShinyList()
 
 
 async function fetchLeekEvents(client) {
@@ -159,14 +178,23 @@ async function scrapeLinks(client, eventLinks) {
       let eventName = name.replaceAll(' ', ' ').replace('PokéStop Showcases', 'Showcases').replace('5-star Raid Battles', '5* Raids').replace('in Shadow Raids', 'Raids').replace('in Mega Raids', 'Raids').replace('Community Day', 'CD');
       //Emojis
       if (trashServer) {
-        //Community Day + Mega raids
-        if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ')) {
+        //Community Day + mega raids + raid hour + 5* raids + raid day
+        if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ') || eventName.endsWith(' Raid Hour') || eventName.endsWith(' in 5* Raids') || eventName.startsWith('Raid Day: ')) {
           var normalEmojiID = '';
           var normalEmoji = '';
           var shinyEmojiID = '';
           var shinyEmoji = '';
-          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Raids', '');
+          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Raids', '').replace(' Raid Hour', '').replace(' in 5*', '').replace('Raid Day: ', '');
           if (util[monName]) {
+            //Check shiny status
+            var shinyStatus = false;
+            if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ')) {
+              shinyStatus = true;
+            } else {
+              if (shinyList[util[monName]] == ' ✨' || shinyList[`${util[monName]}_0`]) {
+                shinyStatus = true;
+              }
+            }
             //Emoji check
             if (emojiList[monName] && newEmojiList[monName]) {
               //Do nothing
@@ -196,7 +224,7 @@ async function scrapeLinks(client, eventLinks) {
           if (normalEmojiID) {
             normalEmoji = await trashServer.emojis.cache.find(emoji => emoji.id == normalEmojiID);
           }
-          if (shinyEmojiID) {
+          if (shinyEmojiID && shinyStatus == true) {
             shinyEmoji = await trashServer.emojis.cache.find(emoji => emoji.id == shinyEmojiID);
           }
           eventName = eventName.replace(monName, `${monName} ${normalEmoji}${shinyEmoji}`);
