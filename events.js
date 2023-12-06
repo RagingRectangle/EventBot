@@ -178,13 +178,13 @@ async function scrapeLinks(client, eventLinks) {
       let eventName = name.replaceAll(' ', ' ').replace('PokéStop Showcases', 'Showcases').replace('5-star Raid Battles', '5* Raids').replace('in Shadow Raids', 'Raids').replace('in Mega Raids', 'Raids').replace('Community Day', 'CD');
       //Emojis
       if (trashServer) {
-        //Community Day + mega raids + raid hour + 5* raids + raid day
-        if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ') || eventName.endsWith(' Raid Hour') || eventName.endsWith(' in 5* Raids') || eventName.startsWith('Raid Day: ')) {
+        //Community Day + mega raids + raid hour + 5* raids + raid day + showcases(single) + spotlights
+        if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ') || eventName.endsWith(' Raid Hour') || eventName.endsWith(' in 5* Raids') || eventName.startsWith('Raid Day: ') || eventName.endsWith(' Showcases') || eventName.endsWith(' Spotlight Hour')) {
           var normalEmojiID = '';
           var normalEmoji = '';
           var shinyEmojiID = '';
           var shinyEmoji = '';
-          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Raids', '').replace(' Raid Hour', '').replace(' in 5*', '').replace('Raid Day: ', '');
+          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Raids', '').replace(' Raid Hour', '').replace(' in 5*', '').replace('Raid Day: ', '').replace(' Showcases', '').replace(' Spotlight Hour', '');
           if (util[monName]) {
             //Check shiny status
             var shinyStatus = false;
