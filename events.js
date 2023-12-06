@@ -52,13 +52,12 @@ client.on('ready', async () => {
 
   //Auto update cron
   try {
-    if (config.autoUpdate == true){
+    if (config.autoUpdate == true) {
       const updateEventsJob = schedule.scheduleJob('updateEventsJob', '0 * * * *', function () {
         cronUpdates();
       });
     }
-  }
-  catch(err){
+  } catch (err) {
     console.log(err);
   }
 
@@ -160,31 +159,36 @@ async function scrapeLinks(client, eventLinks) {
       let eventName = name.replaceAll(' ', ' ').replace('PokéStop Showcases', 'Showcases').replace('5-star Raid Battles', '5* Raids').replace('in Shadow Raids', 'Raids').replace('in Mega Raids', 'Raids').replace('Community Day', 'CD');
       //Emojis
       if (trashServer) {
-        //Community Day
-        if (eventLinks[e]['type'] == 'Community Day') {
+        //Community Day + Mega raids
+        if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ')) {
           var normalEmojiID = '';
           var normalEmoji = '';
           var shinyEmojiID = '';
           var shinyEmoji = '';
-          var monName = eventName.replace(' CD Classic', '').replace(' CD', '');
+          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Raids', '');
           if (util[monName]) {
             //Emoji check
             if (emojiList[monName] && newEmojiList[monName]) {
               //Do nothing
             } else if (emojiList[monName] && !newEmojiList[monName]) {
               newEmojiList[monName] = emojiList[monName];
+              newEmojiList[`${monName} Shiny`] = emojiList[`${monName} Shiny`];
             }
             //Create emoji
             else {
               console.log(`Create ${monName} emojis...`);
               //Normal
               normalEmojiID = await createEmoji(util[monName]);
-              newEmojiList[monName] = normalEmojiID;
-              await new Promise(done => setTimeout(done, 3000));
+              if (normalEmojiID != 'ERROR') {
+                newEmojiList[monName] = normalEmojiID;
+                await new Promise(done => setTimeout(done, 3000));
+              }
               //Shiny
               shinyEmojiID = await createEmoji(`${util[monName]}_s`);
-              newEmojiList[`${monName} Shiny`] = shinyEmojiID;
-              await new Promise(done => setTimeout(done, 3000));
+              if (shinyEmojiID != 'ERROR') {
+                newEmojiList[`${monName} Shiny`] = shinyEmojiID;
+                await new Promise(done => setTimeout(done, 3000));
+              }
             }
           }
           normalEmojiID = newEmojiList[monName];
@@ -429,7 +433,7 @@ client.on('interactionCreate', async interaction => {
 async function createEmoji(dexIndex) {
   return new Promise(async (resolve, reject) => {
     try {
-      let emojiLink = `https://github.com/RagingRectangle/GifMons/blob/main/pokemon/${dexIndex}.gif?raw=true`;
+      let emojiLink = `https://github.com/RagingRectangle/Pokemojis/blob/main/pokemon/${dexIndex}.gif?raw=true`;
       await trashServer.emojis.create({
           attachment: emojiLink,
           name: dexIndex
