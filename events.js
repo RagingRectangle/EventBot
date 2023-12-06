@@ -40,15 +40,28 @@ emojiList = JSON.parse(fs.readFileSync('./emojis.json'));
 
 client.on('ready', async () => {
   console.log("EventBot Logged In");
-  fetchLeekEvents(client, 'boot');
-  //Update events cron
+  fetchLeekEvents(client);
+  //Fetch new events cron
   try {
-    const cronJob = schedule.scheduleJob('eventCron', '0 * * * *', function () {
-      fetchLeekEvents(client, 'cron');
+    const fetchEventsJob = schedule.scheduleJob('fetchEventsJob', '55 * * * *', function () {
+      fetchLeekEvents(client);
     });
   } catch (err) {
     console.log(err);
   }
+
+  //Auto update cron
+  try {
+    if (config.autoUpdate == true){
+      const updateEventsJob = schedule.scheduleJob('updateEventsJob', '0 * * * *', function () {
+        cronUpdates();
+      });
+    }
+  }
+  catch(err){
+    console.log(err);
+  }
+
   //Register Slash Commands
   SlashRegistry.registerCommands(client, config);
 
@@ -64,7 +77,7 @@ client.on('ready', async () => {
 }); //End of ready()
 
 
-async function fetchLeekEvents(client, type) {
+async function fetchLeekEvents(client) {
   try {
     const response = await fetch('https://leekduck.com/events/');
     const body = await response.text();
@@ -81,14 +94,14 @@ async function fetchLeekEvents(client, type) {
       }
     });
     eventLinks = _.uniqBy(eventLinks, 'link');
-    scrapeLinks(client, eventLinks, type)
+    scrapeLinks(client, eventLinks)
   } catch (err) {
     console.log(err);
   }
 } //End of fetchLeekEvents()
 
 
-async function scrapeLinks(client, eventLinks, type) {
+async function scrapeLinks(client, eventLinks) {
   var newEmojiList = {};
   var currentEventsTemp = [];
   var futureEventsCDTemp = [];
@@ -183,10 +196,7 @@ async function scrapeLinks(client, eventLinks, type) {
             shinyEmoji = await trashServer.emojis.cache.find(emoji => emoji.id == shinyEmojiID);
           }
           eventName = eventName.replace(monName, `${monName} ${normalEmoji}${shinyEmoji}`);
-
         } //End of CDs
-
-
       } //End of emojis
 
       let event = {
@@ -335,11 +345,6 @@ async function scrapeLinks(client, eventLinks, type) {
     futureOther: futureDescriptionOther
   }
   fs.writeFileSync('./events.json', JSON.stringify(eventObj));
-
-  //Auto updates
-  if (type == 'cron' && config.autoUpdate == true) {
-    cronUpdates();
-  }
 } //End of scrapeLinks()
 
 
