@@ -33,6 +33,10 @@ npm install
 
 **hideUpdateButton:** Hide button if autoUpdate = true (Will hide after 1st press).
 
+**useEmojis:** Include emojis in event names when possible.
+
+**trashServerID:** A trash server where the bot can create/delete emojis. Needs `Manage Expressions` permission.
+
 **colors:** Hex codes for embed colors.
 
 **months:** Years aren't included when scraping so this was my lazy solution. Will just need to update them every once in awhile.

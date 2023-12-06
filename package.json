@@ -1,6 +1,6 @@
 {
-  "name": "pogoevents",
-  "version": "1.1.1",
+  "name": "eventbot",
+  "version": "1.2.0",
   "description": "",
   "main": "events.js",
   "scripts": {
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/RagingRectangle/PoGoEvents.git"
+    "url": "git+https://github.com/RagingRectangle/EventBot.git"
   },
   "author": "RagingRectangle",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/RagingRectangle/PoGoEvents/issues"
+    "url": "https://github.com/RagingRectangle/EventBot/issues"
   },
-  "homepage": "https://github.com/RagingRectangle/PoGoEvents#readme",
+  "homepage": "https://github.com/RagingRectangle/EventBot#readme",
   "dependencies": {
     "@discordjs/rest": "1.1.0",
     "cheerio": "^1.0.0-rc.12",

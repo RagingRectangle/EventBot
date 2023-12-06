@@ -1,6 +1,7 @@
 
 node_modules/
 config.json
+emojis.json
 autoUpdates.json
 events.json
 package-lock.json

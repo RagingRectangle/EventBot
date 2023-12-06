@@ -6,6 +6,8 @@
   "ignoreUnannounced": false,
   "autoUpdate": false,
   "hideUpdateButton": false,
+  "useEmojis": false,
+  "trashServerID": "",
   "colors": {
     "current": "048900",
     "futureCD": "2A47FF",

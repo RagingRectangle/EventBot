@@ -22,11 +22,21 @@ const tz = require('moment-timezone');
 const schedule = require('node-schedule');
 const SlashRegistry = require("./slashRegistry.js");
 var config = require('./config.json');
+var util = require('./util.json');
+var emojiList = '';
+var trashServer = '';
 
 //Auto update check
 if (config.autoUpdate == true && !fs.existsSync('./autoUpdates.json')) {
   fs.writeFileSync('./autoUpdates.json', '{}');
 }
+
+//Emoji check
+if (!fs.existsSync('./emojis.json')) {
+  fs.writeFileSync('./emojis.json', '{}');
+}
+emojiList = JSON.parse(fs.readFileSync('./emojis.json'));
+
 
 client.on('ready', async () => {
   console.log("EventBot Logged In");
@@ -41,6 +51,16 @@ client.on('ready', async () => {
   }
   //Register Slash Commands
   SlashRegistry.registerCommands(client, config);
+
+  //Fetch trash server
+  if (config.useEmojis == true && config.trashServerID) {
+    try {
+      trashServer = await client.guilds.fetch(config.trashServerID);
+    } catch (err) {
+      console.log(`Failed to fetch emoji trash server: ${err}`);
+      process.exit();
+    }
+  }
 }); //End of ready()
 
 
@@ -60,6 +80,7 @@ async function fetchLeekEvents(client, type) {
         });
       }
     });
+    eventLinks = _.uniqBy(eventLinks, 'link');
     scrapeLinks(client, eventLinks, type)
   } catch (err) {
     console.log(err);
@@ -68,6 +89,7 @@ async function fetchLeekEvents(client, type) {
 
 
 async function scrapeLinks(client, eventLinks, type) {
+  var newEmojiList = {};
   var currentEventsTemp = [];
   var futureEventsCDTemp = [];
   var futureEventsRaidTemp = [];
@@ -122,9 +144,53 @@ async function scrapeLinks(client, eventLinks, type) {
       if ($('#event-time-end').text().includes(':59')) {
         endText = `${endDateSplit[0].slice(0,3)}, ${endDateSplit[1].slice(0,3)} ${endDateSplit[2]} @ ${endTimeSplit[0]}:59 ${endTimeSplit[1]}`;
       }
+      let eventName = name.replaceAll(' ', ' ').replace('PokéStop Showcases', 'Showcases').replace('5-star Raid Battles', '5* Raids').replace('in Shadow Raids', 'Raids').replace('in Mega Raids', 'Raids').replace('Community Day', 'CD');
+      //Emojis
+      if (trashServer) {
+        //Community Day
+        if (eventLinks[e]['type'] == 'Community Day') {
+          var normalEmojiID = '';
+          var normalEmoji = '';
+          var shinyEmojiID = '';
+          var shinyEmoji = '';
+          var monName = eventName.replace(' CD Classic', '').replace(' CD', '');
+          if (util[monName]) {
+            //Emoji check
+            if (emojiList[monName] && newEmojiList[monName]) {
+              //Do nothing
+            } else if (emojiList[monName] && !newEmojiList[monName]) {
+              newEmojiList[monName] = emojiList[monName];
+            }
+            //Create emoji
+            else {
+              console.log(`Create ${monName} emojis...`);
+              //Normal
+              normalEmojiID = await createEmoji(util[monName]);
+              newEmojiList[monName] = normalEmojiID;
+              await new Promise(done => setTimeout(done, 3000));
+              //Shiny
+              shinyEmojiID = await createEmoji(`${util[monName]}_s`);
+              newEmojiList[`${monName} Shiny`] = shinyEmojiID;
+              await new Promise(done => setTimeout(done, 3000));
+            }
+          }
+          normalEmojiID = newEmojiList[monName];
+          shinyEmojiID = newEmojiList[`${monName} Shiny`];
+          if (normalEmojiID) {
+            normalEmoji = await trashServer.emojis.cache.find(emoji => emoji.id == normalEmojiID);
+          }
+          if (shinyEmojiID) {
+            shinyEmoji = await trashServer.emojis.cache.find(emoji => emoji.id == shinyEmojiID);
+          }
+          eventName = eventName.replace(monName, `${monName} ${normalEmoji}${shinyEmoji}`);
+
+        } //End of CDs
+
+
+      } //End of emojis
 
       let event = {
-        "name": name.replaceAll(' ', ' ').replace('PokéStop Showcases', 'Showcases').replace('5-star Raid Battles', '5* Raids').replace('in Shadow Raids', 'Raids').replace('in Mega Raids', 'Raids').replace('Community Day', 'CD'),
+        "name": eventName,
         "type": eventLinks[e]['type'],
         "link": `https://leekduck.com${eventLinks[e]['link']}`,
         "startTimeUnix": startTimeUnix,
@@ -167,6 +233,19 @@ async function scrapeLinks(client, eventLinks, type) {
       console.log(err);
     }
   } //End of e loop
+
+  //Delete old emojis
+  var oldEmojis = [];
+  let oldIDs = Object.values(emojiList);
+  for (var e in oldIDs) {
+    if (!Object.values(newEmojiList).includes(oldIDs[e])) {
+      oldEmojis.push(oldIDs[e]);
+    }
+  }
+  if (oldEmojis.length > 0) {
+    deleteEmojis(oldEmojis);
+  }
+  fs.writeFileSync('./emojis.json', JSON.stringify(newEmojiList));
 
   //Current
   var currentEvents = _.sortBy(currentEventsTemp,
@@ -340,6 +419,42 @@ client.on('interactionCreate', async interaction => {
     }
   }
 }); //End of buttons/lists
+
+
+async function createEmoji(dexIndex) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let emojiLink = `https://github.com/RagingRectangle/GifMons/blob/main/pokemon/${dexIndex}.gif?raw=true`;
+      await trashServer.emojis.create({
+          attachment: emojiLink,
+          name: dexIndex
+        })
+        .then(emoji => {
+          console.log(`${dexIndex} created: ${emoji.id}`);
+          return resolve(emoji.id);
+        });
+    } catch (err) {
+      console.log(err);
+      return resolve(`ERROR`);
+    }
+  });
+}; //End of createEmoji()
+
+
+async function deleteEmojis(oldEmojis) {
+  for (var i in oldEmojis) {
+    try {
+      let emojiCheck = await trashServer.emojis.cache.find(emoji => emoji.id == oldEmojis[i]);
+      if (emojiCheck) {
+        await emojiCheck.delete()
+          .then(emoji => console.log(`Deleted emoji ${oldEmojis[i]}`))
+          .catch(console.error);
+      }
+    } catch (err) {
+      console.log(`Unable to delete emoji ${oldEmojis[i]}`)
+    }
+  }
+} //End of deleteEmojis()
 
 
 async function createEmbeds() {
