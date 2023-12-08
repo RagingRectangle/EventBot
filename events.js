@@ -41,6 +41,36 @@ emojiList = JSON.parse(fs.readFileSync('./emojis.json'));
 
 client.on('ready', async () => {
   console.log("EventBot Logged In");
+
+  //Fetch trash server
+  if (config.useEmojis == true && config.trashServerID) {
+    try {
+      trashServer = await client.guilds.fetch(config.trashServerID);
+      var trashServerEmojis = {};
+      trashServer.emojis.cache.forEach((emoji) => {
+        trashServerEmojis[emoji.name] = emoji.id;
+      });
+      var newEmojiList = {};
+      for (const [monName, monIndex] of Object.entries(util)) {
+        try {
+          if (Object.keys(trashServerEmojis).includes(monIndex)) {
+            newEmojiList[monName] = trashServerEmojis[monIndex];
+          }
+          if (Object.keys(trashServerEmojis).includes(`${monIndex}_s`)) {
+            newEmojiList[`${monName} Shiny`] = trashServerEmojis[`${monIndex}_s`];
+          }
+        } catch (err) {
+          console.log(err);
+        }
+      }
+      emojiList = newEmojiList
+      fs.writeFileSync('./emojis.json', JSON.stringify(emojiList));
+    } catch (err) {
+      console.log(`Failed to fetch emoji trash server: ${err}`);
+      process.exit();
+    }
+  }
+
   fetchShinyList(client);
   //Fetch new events cron
   try {
@@ -64,16 +94,6 @@ client.on('ready', async () => {
 
   //Register Slash Commands
   SlashRegistry.registerCommands(client, config);
-
-  //Fetch trash server
-  if (config.useEmojis == true && config.trashServerID) {
-    try {
-      trashServer = await client.guilds.fetch(config.trashServerID);
-    } catch (err) {
-      console.log(`Failed to fetch emoji trash server: ${err}`);
-      process.exit();
-    }
-  }
 }); //End of ready()
 
 
