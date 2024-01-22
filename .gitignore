@@ -2,6 +2,7 @@
 node_modules/
 config.json
 emojis.json
+shinyList.json
 autoUpdates.json
 events.json
 package-lock.json

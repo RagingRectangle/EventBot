@@ -24,8 +24,14 @@ const SlashRegistry = require("./slashRegistry.js");
 var config = require('./config.json');
 var util = require('./util.json');
 var emojiList = {};
-var shinyList = require('./shinyList.json');
 var trashServer = '';
+
+//Shiny list check
+if (!fs.existsSync('./shinyList.json')){
+  fs.writeFileSync('./shinyList.json', '{}');
+}
+var shinyList = require('./shinyList.json');
+
 
 //Auto update check
 if (config.autoUpdate == true && !fs.existsSync('./autoUpdates.json')) {
@@ -40,7 +46,7 @@ emojiList = JSON.parse(fs.readFileSync('./emojis.json'));
 
 
 client.on('ready', async () => {
-  console.log("EventBot Logged In");
+  console.log("EventBot logged in");
 
   //Fetch trash server
   if (config.useEmojis == true && config.trashServerID) {
@@ -69,6 +75,9 @@ client.on('ready', async () => {
       console.log(`Failed to fetch emoji trash server: ${err}`);
       process.exit();
     }
+  }
+  else {
+    console.log('Emojis skipped');
   }
 
   fetchShinyList(client);
@@ -167,6 +176,7 @@ async function scrapeLinks(client, eventLinks) {
       if (startTimeSplit[1] == 'PM') {
         startHour = startHour + 12;
       }
+      startHour = ("0" + startHour).slice(-2);
       //6 Mar 2017 21:22:23 GMT
       let startTimeUnix = moment(`${startDateSplit[2]} ${startDateSplit[1].slice(0,3)} ${config.months[startDateSplit[1]]} ${startHour}:00 GMT`).subtract(config.timezoneOffset, 'hours').format('X');
       let hoursUntilStart = (startTimeUnix - moment(new Date()).format('X')) / 60 / 60;
@@ -188,6 +198,7 @@ async function scrapeLinks(client, eventLinks) {
       } else {
         endHour = `${endHour}:00`;
       }
+      endHour = ("0" + endHour).slice(-5);
       //6 Mar 2017 21:22:23 GMT
       let endTimeUnix = moment(`${endDateSplit[2]} ${endDateSplit[1].slice(0,3)} ${config.months[endDateSplit[1]]} ${endHour} GMT`).subtract(config.timezoneOffset, 'hours').format('X');
       let hoursUntilEnd = (endTimeUnix - moment(new Date()).format('X')) / 60 / 60;
