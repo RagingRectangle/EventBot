@@ -280,11 +280,11 @@ async function scrapeLinks(client, eventLinks) {
         continue;
       }
       //Current events
-      else if (hoursUntilStart < 0) {
+      else if (hoursUntilStart <= 0.1) {
         currentEventsTemp.push(event);
       }
       //Future events
-      else if (hoursUntilStart > 0) {
+      else if (hoursUntilStart > 0.1) {
         //CD
         if (eventLinks[e]['type'] == "Community Day") {
           futureEventsCDTemp.push(event);
