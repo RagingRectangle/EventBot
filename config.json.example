@@ -29,7 +29,7 @@
     "November": 2024,
     "December": 2024
   },
-  "eventTypesAll": ["Pokémon Spotlight Hour", "Raid Battles", "Event", "Community Day", "Season", "Raid Hour", "Elite Raids, "PokéStop Showcase", "Raid Day"],
+  "eventTypesAll": ["Pokémon Spotlight Hour", "Raid Battles", "Event", "Community Day", "Season", "Raid Hour", "Elite Raids, "PokéStop Showcase", "Raid Day", "Ticketed Event"],
   "eventTypesRaid": ["Raid Battles", "Raid Hour", "Raid Day", "Elite Raids"],
   "eventTypesSpotCase": ["Pokémon Spotlight Hour", "PokéStop Showcase"]
 }

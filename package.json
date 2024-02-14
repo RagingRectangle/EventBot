@@ -1,6 +1,6 @@
 {
   "name": "eventbot",
-  "version": "1.6.0",
+  "version": "1.6.2",
   "description": "",
   "main": "events.js",
   "scripts": {
