@@ -27,7 +27,7 @@ var emojiList = {};
 var trashServer = '';
 
 //Shiny list check
-if (!fs.existsSync('./shinyList.json')){
+if (!fs.existsSync('./shinyList.json')) {
   fs.writeFileSync('./shinyList.json', '{}');
 }
 var shinyList = require('./shinyList.json');
@@ -75,8 +75,7 @@ client.on('ready', async () => {
       console.log(`Failed to fetch emoji trash server: ${err}`);
       process.exit();
     }
-  }
-  else {
+  } else {
     console.log('Emojis skipped');
   }
 
@@ -141,7 +140,7 @@ async function fetchLeekEvents(client) {
       }
     });
     eventLinks = _.uniqBy(eventLinks, 'link');
-    scrapeLinks(client, eventLinks)
+    scrapeLinks(client, eventLinks);
   } catch (err) {
     console.log(err);
   }
@@ -173,12 +172,12 @@ async function scrapeLinks(client, eventLinks) {
       let startTimeSplit = $('#event-time-start').text().replace('at', '').replace(':00', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
       startTimeSplit = startTimeSplit.filter(a => a);
       var startHour = startTimeSplit[0] * 1;
-      if (startTimeSplit[1] == 'PM') {
+      if (startTimeSplit[1] == 'PM' && startTimeSplit[0] != 12) {
         startHour = startHour + 12;
       }
       startHour = ("0" + startHour).slice(-2);
       //6 Mar 2017 21:22:23 GMT
-      let startTimeUnix = moment(`${startDateSplit[2]} ${startDateSplit[1].slice(0,3)} ${config.months[startDateSplit[1]]} ${startHour}:00 GMT`).subtract(config.timezoneOffset, 'hours').format('X');
+      let startTimeUnix = moment(`${startDateSplit[2]} ${startDateSplit[1].slice(0,3)} ${config.months[startDateSplit[1]]} ${startHour.replace(24, 12)}:00 GMT`).subtract(config.timezoneOffset, 'hours').format('X');
       let hoursUntilStart = (startTimeUnix - moment(new Date()).format('X')) / 60 / 60;
       let startText = `${startDateSplit[0].slice(0,3)}, ${startDateSplit[1].slice(0,3)} ${startDateSplit[2]} @ ${startTimeSplit[0]} ${startTimeSplit[1]}`;
 
@@ -187,7 +186,7 @@ async function scrapeLinks(client, eventLinks) {
       let endDateSplit = $('#event-date-end').text().replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
       endDateSplit = endDateSplit.filter(a => a);
       //[ '6', 'PM', 'Local Time' ]
-      let endTimeSplit = $('#event-time-end').text().replace('at', '').replace(':00', '').replace(':59', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
+      let endTimeSplit = $('#event-time-end').text().replace('at', '').replace(':00', '').replace(':59', '').replace(':45', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
       endTimeSplit = endTimeSplit.filter(a => a);
       var endHour = endTimeSplit[0] * 1;
       if (endTimeSplit[1] == 'PM') {
@@ -195,6 +194,8 @@ async function scrapeLinks(client, eventLinks) {
       }
       if ($('#event-time-end').text().includes(':59')) {
         endHour = `${endHour}:59`;
+      } else if ($('#event-time-end').text().includes(':45')) {
+        endHour = `${endHour}:45`;
       } else {
         endHour = `${endHour}:00`;
       }
@@ -209,13 +210,13 @@ async function scrapeLinks(client, eventLinks) {
       let eventName = name.replaceAll(' ', ' ').replace('PokéStop Showcases', 'Showcases').replace('5-star Raid Battles', '5* Raids').replace('in Shadow Raids', 'Raids').replace('in Mega Raids', 'Raids').replace('Community Day', 'CD');
       //Emojis
       if (trashServer) {
-        //Community Day + mega raids + raid hour + 5* raids + raid day + showcases(single) + spotlights
-        if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ') || eventName.endsWith(' Raid Hour') || eventName.endsWith(' in 5* Raids') || eventName.startsWith('Raid Day: ') || eventName.endsWith(' Showcases') || eventName.endsWith(' Spotlight Hour')) {
+        //Community Day + mega raids + raid hour + 5* raids + raid day + showcases(single) + spotlights + elite raids
+        if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ') || eventName.endsWith(' Raid Hour') || eventName.endsWith(' in 5* Raids') || eventName.startsWith('Raid Day: ') || eventName.endsWith(' Showcases') || eventName.endsWith(' Spotlight Hour') || eventName.endsWith(' in Elite Raids')) {
           var normalEmojiID = '';
           var normalEmoji = '';
           var shinyEmojiID = '';
           var shinyEmoji = '';
-          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Raids', '').replace(' Raid Hour', '').replace(' in 5*', '').replace('Raid Day: ', '').replace(' Showcases', '').replace(' Spotlight Hour', '');
+          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Raids', '').replace(' Raid Hour', '').replace(' in 5*', '').replace('Raid Day: ', '').replace(' Showcases', '').replace(' Spotlight Hour', '').replace(' Raid Hour', '');
           if (util[monName]) {
             //Check shiny status
             var shinyStatus = false;
@@ -271,6 +272,7 @@ async function scrapeLinks(client, eventLinks) {
         "endTimeUnix": endTimeUnix,
         "endText": endText
       }
+
       //Skip old events
       if (hoursUntilEnd < -12) {
         continue;
