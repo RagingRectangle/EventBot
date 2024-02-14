@@ -1,4 +1,4 @@
-# PoGO Events Bot
+# PoGO Event Bot
 
 ## About
 A Discord bot for displaying current and future PoGO events.
@@ -19,7 +19,7 @@ npm install
 ```
 
 ## Config Setup
-**Token:** Discord token used for Poracle bot.
+**Token:** Discord token for bot.
 
 **timezoneOffset:** Also used for the last updated date in the footer.
 
