@@ -177,6 +177,12 @@ async function scrapeLinks(client, eventLinks) {
       startDateSplit = startDateSplit.filter(a => a);
       //[ '6', 'PM', 'Local Time' ]
       let startTimeSplit = $('#event-time-start').text().replace('at', '').replace(':00', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
+
+      ////Check for non-local events (Tours)
+      if (startTimeSplit.length < 2) {
+        continue;
+      }
+
       startTimeSplit = startTimeSplit.filter(a => a);
       var startHour = startTimeSplit[0] * 1;
       if (startTimeSplit[1] == 'PM' && startTimeSplit[0] != 12) {
