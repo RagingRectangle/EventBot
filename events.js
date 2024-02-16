@@ -53,8 +53,15 @@ client.on('ready', async () => {
     try {
       trashServer = await client.guilds.fetch(config.trashServerID);
       var trashServerEmojis = {};
-      trashServer.emojis.cache.forEach((emoji) => {
-        trashServerEmojis[emoji.name] = emoji.id;
+      trashServer.emojis.cache.forEach(async (emoji) => {
+        //Check for duplicates
+        if (trashServerEmojis[emoji.name]) {
+          await emoji.delete()
+            .then(emoji => console.log(`Deleted duplicate emoji ${emoji.name}`))
+            .catch(console.error);
+        } else {
+          trashServerEmojis[emoji.name] = emoji.id;
+        }
       });
       var newEmojiList = {};
       for (const [monName, monIndex] of Object.entries(util)) {
