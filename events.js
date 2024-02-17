@@ -241,7 +241,7 @@ async function scrapeLinks(client, eventLinks) {
               }
             }
             //Emoji check
-            if (emojiList[monName] && newEmojiList[monName]) {
+            if (newEmojiList[monName]) {
               //Do nothing
             } else if (emojiList[monName] && !newEmojiList[monName]) {
               newEmojiList[monName] = emojiList[monName];
