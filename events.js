@@ -173,10 +173,10 @@ async function scrapeLinks(client, eventLinks) {
       }
       //Start Time
       //[ 'Wednesday', 'September', '20' ]
-      var startDateSplit = $('#event-date-start').text().replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
+      var startDateSplit = $('#event-date-start').text().replaceAll('\n', '').replaceAll(' ', ' ').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
       startDateSplit = startDateSplit.filter(a => a);
       //[ '6', 'PM', 'Local Time' ]
-      let startTimeSplit = $('#event-time-start').text().replace('at', '').replace(':00', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
+      let startTimeSplit = $('#event-time-start').text().replaceAll(' ', ' ').replace('at ', '').replace(':00', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
 
       ////Check for non-local events (Tours)
       if (startTimeSplit.length < 2) {
@@ -196,10 +196,10 @@ async function scrapeLinks(client, eventLinks) {
 
       //End Time
       //[ 'Wednesday', 'September', '20' ]
-      let endDateSplit = $('#event-date-end').text().replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
+      let endDateSplit = $('#event-date-end').text().replaceAll('\n', '').replaceAll(' ', ' ').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
       endDateSplit = endDateSplit.filter(a => a);
       //[ '6', 'PM', 'Local Time' ]
-      let endTimeSplit = $('#event-time-end').text().replace('at', '').replace(':00', '').replace(':59', '').replace(':45', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
+      let endTimeSplit = $('#event-time-end').text().replace('at', '').replaceAll(' ', ' ').replace(':00', '').replace(':59', '').replace(':45', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
       endTimeSplit = endTimeSplit.filter(a => a);
       var endHour = endTimeSplit[0] * 1;
       if (endTimeSplit[1] == 'PM') {
