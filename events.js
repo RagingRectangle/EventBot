@@ -137,7 +137,7 @@ async function fetchLeekEvents(client) {
     const $ = cheerio.load(body);
     var eventLinks = [];
     $('.event-item-link').each((i, classEvent) => {
-      let type = $(classEvent).find('p').first().text();
+      let type = $(classEvent).find('p').first().text().replace('Ticketed', 'Ticketed Event');
       let link = $(classEvent).attr('href');
       if (config.eventTypesAll.includes(type)) {
         eventLinks.push({
@@ -164,7 +164,7 @@ async function scrapeLinks(client, eventLinks) {
   for (var e in eventLinks) {
     try {
       let eventResponse = await fetch(`https://leekduck.com${eventLinks[e]['link']}`);
-      //console.log(`https://leekduck.com${eventLinks[e]['link']}`)
+      //console.log(`https://leekduck.com${eventLinks[e]['link']}`);
       const body = await eventResponse.text();
       const $ = cheerio.load(body);
       var name = $('.page-title').text();
@@ -221,6 +221,54 @@ async function scrapeLinks(client, eventLinks) {
         endText = `${endDateSplit[0].slice(0,3)}, ${endDateSplit[1].slice(0,3)} ${endDateSplit[2]} @ ${endTimeSplit[0]}:59 ${endTimeSplit[1]}`;
       }
       let eventName = name.replaceAll(' ', ' ').replace('PokéStop Showcases', 'Showcases').replace('5-star Raid Battles', '5* Raids').replace('in Shadow Raids', 'Raids').replace('in Mega Raids', 'Raids').replace('Community Day', 'CD');
+
+      //Extra info
+      var extraInfo = [];
+      //Graphics
+      if (config.graphics == true) {
+        var graphicLinks = [];
+        $('p').each((i, paragraph) => {
+          var graphicLink = $(paragraph).find('img').attr('src');
+          if (graphicLink && graphicLink.startsWith('/assets/img/events/') && !graphicLink.includes('article-images')) {
+            graphicLink = `https://leekduck.com${graphicLink.replaceAll(' ', ' ').replaceAll(' ', '%20')}`;
+            //Research graphic
+            if (graphicLink.includes('Special%20Research')) {
+              graphicLinks.push(`[Research](${graphicLink})`);
+            }
+            //Raid guide graphic
+            else if (graphicLink.includes('Raid%20Guide')) {
+              graphicLinks.push(`[Guide](${graphicLink})`);
+            }
+            //Parts
+            else if (graphicLink.includes('%20Part%20')) {
+              let linkSplit = graphicLink.replace('.jpg', '').replace('.png', '').split('%20');
+              if (Number.isInteger(linkSplit[linkSplit.length - 1] * 1)){
+                graphicLinks.push(`[Part ${linkSplit[linkSplit.length - 1]}](${graphicLink})`);
+              }
+              else {
+                graphicLinks.push(`[Overview](${graphicLink})`);
+              }
+            }
+            //Overview graphic
+            else {
+              graphicLinks.push(`[Overview](${graphicLink})`);
+            }
+          }
+        }); //End of graphic scrape
+        if (graphicLinks.length > 0) {
+          extraInfo.push(`\n- Graphics: ${graphicLinks.join(' | ')}`);
+        }
+      } //End of graphics
+
+      //Quest Reroll
+      if (config.questReroll == true) {
+        $('h2').each((i, header) => {
+          if ($(header).text() == 'Field Research Tasks') {
+            extraInfo.push(`\n- ${config.rerollText}`);
+          }
+        });
+      } //End of questReroll
+
       //Emojis
       if (trashServer) {
         //Community Day + mega raids + raid hour + 5* raids + raid day + showcases(single) + spotlights + elite raids
@@ -283,7 +331,8 @@ async function scrapeLinks(client, eventLinks) {
         "startTimeUnix": startTimeUnix,
         "startText": startText,
         "endTimeUnix": endTimeUnix,
-        "endText": endText
+        "endText": endText,
+        "extraInfo": extraInfo.join('')
       }
 
       //Skip old events
@@ -345,11 +394,11 @@ async function scrapeLinks(client, eventLinks) {
   for (var c in currentEvents) {
     //Skip Leek links
     if (currentEventsTemp.type == 'Pokémon Spotlight Hour' || currentEventsTemp.type == 'Raid Hour' || currentEventsTemp.type == 'PokéStop Showcase') {
-      currentDescription.push(`${currentEvents[c]['name']}\n- Ends ${currentEvents[c]['endText']} <t:${currentEvents[c]['endTimeUnix']}:R>`);
+      currentDescription.push(`${currentEvents[c]['name']}\n- Ends ${currentEvents[c]['endText']} <t:${currentEvents[c]['endTimeUnix']}:R>${currentEvents[c]['extraInfo']}`);
     }
     //Include link
     else {
-      currentDescription.push(`[${currentEvents[c]['name']}](${currentEvents[c]['link']})\n- Ends ${currentEvents[c]['endText']} <t:${currentEvents[c]['endTimeUnix']}:R>`);
+      currentDescription.push(`[${currentEvents[c]['name']}](${currentEvents[c]['link']})\n- Ends ${currentEvents[c]['endText']} <t:${currentEvents[c]['endTimeUnix']}:R>${currentEvents[c]['extraInfo']}`);
     }
   } //End of c loop
 
@@ -361,7 +410,7 @@ async function scrapeLinks(client, eventLinks) {
   futureEventsCD = [...new Map(futureEventsCD.map(v => [JSON.stringify(v), v])).values()]
   var futureDescriptionCD = ['## **__Upcoming Community Days:__**'];
   for (var f in futureEventsCD) {
-    futureDescriptionCD.push(`[${futureEventsCD[f]['name']}](${futureEventsCD[f]['link']})\n- Starts ${futureEventsCD[f]['startText']} <t:${futureEventsCD[f]['startTimeUnix']}:R>\n- Ends ${futureEventsCD[f]['endText']} <t:${futureEventsCD[f]['endTimeUnix']}:R>`);
+    futureDescriptionCD.push(`[${futureEventsCD[f]['name']}](${futureEventsCD[f]['link']})\n- Starts ${futureEventsCD[f]['startText']} <t:${futureEventsCD[f]['startTimeUnix']}:R>\n- Ends ${futureEventsCD[f]['endText']} <t:${futureEventsCD[f]['endTimeUnix']}:R>${futureEventsCD[f]['extraInfo']}`);
   } //End of f loop
 
   //Future Raid
@@ -374,9 +423,9 @@ async function scrapeLinks(client, eventLinks) {
   for (var f in futureEventsRaid) {
     //Raid Hour
     if (futureEventsRaid[f]['type'] == 'Raid Hour') {
-      futureDescriptionRaid.push(`${futureEventsRaid[f]['name']}\n- Starts ${futureEventsRaid[f]['startText']} <t:${futureEventsRaid[f]['startTimeUnix']}:R>`);
+      futureDescriptionRaid.push(`${futureEventsRaid[f]['name']}\n- Starts ${futureEventsRaid[f]['startText']} <t:${futureEventsRaid[f]['startTimeUnix']}:R>${futureEventsRaid[f]['extraInfo']}`);
     } else {
-      futureDescriptionRaid.push(`[${futureEventsRaid[f]['name']}](${futureEventsRaid[f]['link']})\n- Starts ${futureEventsRaid[f]['startText']} <t:${futureEventsRaid[f]['startTimeUnix']}:R>\n- Ends ${futureEventsRaid[f]['endText']} <t:${futureEventsRaid[f]['endTimeUnix']}:R>`);
+      futureDescriptionRaid.push(`[${futureEventsRaid[f]['name']}](${futureEventsRaid[f]['link']})\n- Starts ${futureEventsRaid[f]['startText']} <t:${futureEventsRaid[f]['startTimeUnix']}:R>\n- Ends ${futureEventsRaid[f]['endText']} <t:${futureEventsRaid[f]['endTimeUnix']}:R>${futureEventsRaid[f]['extraInfo']}`);
     }
     if (futureDescriptionRaid.join('\n\n').length > 3000) {
       futureDescriptionRaid.pop();
@@ -392,7 +441,7 @@ async function scrapeLinks(client, eventLinks) {
   futureEventsSpotCase = [...new Map(futureEventsSpotCase.map(v => [JSON.stringify(v), v])).values()]
   var futureDescriptionSpotCase = ['## **__Upcoming Spotlights/Showcases:__**'];
   for (var f in futureEventsSpotCase) {
-    futureDescriptionSpotCase.push(`${futureEventsSpotCase[f]['name']}\n- Starts ${futureEventsSpotCase[f]['startText']} <t:${futureEventsSpotCase[f]['startTimeUnix']}:R>`);
+    futureDescriptionSpotCase.push(`${futureEventsSpotCase[f]['name']}\n- Starts ${futureEventsSpotCase[f]['startText']} <t:${futureEventsSpotCase[f]['startTimeUnix']}:R>${futureEventsSpotCase[f]['extraInfo']}`);
     if (futureDescriptionSpotCase.join('\n\n').length > 3000) {
       futureDescriptionSpotCase.pop();
       break;
@@ -411,7 +460,7 @@ async function scrapeLinks(client, eventLinks) {
     if (futureEventsOther[f]['name'].includes('Unannounced Event')) {
       futureDescriptionOther.push(`[${futureEventsOther[f]['name']}](${futureEventsOther[f]['link']})`);
     } else {
-      futureDescriptionOther.push(`[${futureEventsOther[f]['name']}](${futureEventsOther[f]['link']})\n- Starts ${futureEventsOther[f]['startText']} <t:${futureEventsOther[f]['startTimeUnix']}:R>\n- Ends ${futureEventsOther[f]['endText']} <t:${futureEventsOther[f]['endTimeUnix']}:R>`);
+      futureDescriptionOther.push(`[${futureEventsOther[f]['name']}](${futureEventsOther[f]['link']})\n- Starts ${futureEventsOther[f]['startText']} <t:${futureEventsOther[f]['startTimeUnix']}:R>\n- Ends ${futureEventsOther[f]['endText']} <t:${futureEventsOther[f]['endTimeUnix']}:R>${futureEventsOther[f]['extraInfo']}`);
     }
   } //End of f loop
 

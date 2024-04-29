@@ -8,6 +8,9 @@
   "hideUpdateButton": false,
   "useEmojis": false,
   "trashServerID": "",
+  "graphics": true,
+  "questReroll": true,
+  "rerollText": "Quest Reroll 🎲",
   "colors": {
     "current": "048900",
     "futureCD": "2A47FF",
