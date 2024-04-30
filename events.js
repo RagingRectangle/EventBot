@@ -242,10 +242,9 @@ async function scrapeLinks(client, eventLinks) {
             //Parts
             else if (graphicLink.includes('%20Part%20')) {
               let linkSplit = graphicLink.replace('.jpg', '').replace('.png', '').split('%20');
-              if (Number.isInteger(linkSplit[linkSplit.length - 1] * 1)){
+              if (Number.isInteger(linkSplit[linkSplit.length - 1] * 1)) {
                 graphicLinks.push(`[Part ${linkSplit[linkSplit.length - 1]}](${graphicLink})`);
-              }
-              else {
+              } else {
                 graphicLinks.push(`[Overview](${graphicLink})`);
               }
             }
@@ -265,6 +264,16 @@ async function scrapeLinks(client, eventLinks) {
         $('h2').each((i, header) => {
           if ($(header).text() == 'Field Research Tasks') {
             extraInfo.push(`\n- ${config.rerollText}`);
+          }
+        });
+      } //End of questReroll
+
+      //Bonus
+      if (config.bonus == true && eventLinks[e]['type'] == 'Pokémon Spotlight Hour') {
+        $('p').each((i, paragraph) => {
+          if ($(paragraph).text().includes('the special bonus is ')) {
+            let bonusSplit = $(paragraph).text().split('the special bonus is ');
+            extraInfo.push(`\n- Bonus: ${bonusSplit[1].replace('.', '')}`);
           }
         });
       } //End of questReroll
