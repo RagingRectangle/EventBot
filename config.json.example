@@ -12,6 +12,7 @@
   "questReroll": true,
   "rerollText": "Quest Reroll 🎲",
   "bonus": true,
+  "24Hour": false,
   "colors": {
     "current": "048900",
     "futureCD": "2A47FF",

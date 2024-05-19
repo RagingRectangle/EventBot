@@ -164,7 +164,6 @@ async function scrapeLinks(client, eventLinks) {
   for (var e in eventLinks) {
     try {
       let eventResponse = await fetch(`https://leekduck.com${eventLinks[e]['link']}`);
-      //console.log(`https://leekduck.com${eventLinks[e]['link']}`);
       const body = await eventResponse.text();
       const $ = cheerio.load(body);
       var name = $('.page-title').text();
@@ -188,11 +187,15 @@ async function scrapeLinks(client, eventLinks) {
       if (startTimeSplit[1] == 'PM' && startTimeSplit[0] != 12) {
         startHour = startHour + 12;
       }
+      var startTimeText = `${startTimeSplit[0]} ${startTimeSplit[1]}`;
+      if (config['24Hour'] == true) {
+        startTimeText = `${startHour}:00`;
+      }
       startHour = ("0" + startHour).slice(-2);
       //6 Mar 2017 21:22:23 GMT
       let startTimeUnix = moment(`${startDateSplit[2]} ${startDateSplit[1].slice(0,3)} ${config.months[startDateSplit[1]]} ${startHour.replace(24, 12)}:00 GMT`).subtract(config.timezoneOffset, 'hours').format('X');
       let hoursUntilStart = (startTimeUnix - moment(new Date()).format('X')) / 60 / 60;
-      let startText = `${startDateSplit[0].slice(0,3)}, ${startDateSplit[1].slice(0,3)} ${startDateSplit[2]} @ ${startTimeSplit[0]} ${startTimeSplit[1]}`;
+      let startText = `${startDateSplit[0].slice(0,3)}, ${startDateSplit[1].slice(0,3)} ${startDateSplit[2]} @ ${startTimeText}`;
 
       //End Time
       //[ 'Wednesday', 'September', '20' ]
@@ -212,14 +215,19 @@ async function scrapeLinks(client, eventLinks) {
       } else {
         endHour = `${endHour}:00`;
       }
+      var endTimeText = `${endTimeSplit[0]} ${endTimeSplit[1]}`;
+      if ($('#event-time-end').text().includes(':59')) {
+        endTimeText = `${endTimeSplit[0]}:59 ${endTimeSplit[1]}`;
+      }
+      if (config['24Hour'] == true) {
+        endTimeText = endHour;
+      }
       endHour = ("0" + endHour).slice(-5);
       //6 Mar 2017 21:22:23 GMT
       let endTimeUnix = moment(`${endDateSplit[2]} ${endDateSplit[1].slice(0,3)} ${config.months[endDateSplit[1]]} ${endHour} GMT`).subtract(config.timezoneOffset, 'hours').format('X');
       let hoursUntilEnd = (endTimeUnix - moment(new Date()).format('X')) / 60 / 60;
-      var endText = `${endDateSplit[0].slice(0,3)}, ${endDateSplit[1].slice(0,3)} ${endDateSplit[2]} @ ${endTimeSplit[0]} ${endTimeSplit[1]}`;
-      if ($('#event-time-end').text().includes(':59')) {
-        endText = `${endDateSplit[0].slice(0,3)}, ${endDateSplit[1].slice(0,3)} ${endDateSplit[2]} @ ${endTimeSplit[0]}:59 ${endTimeSplit[1]}`;
-      }
+      var endText = `${endDateSplit[0].slice(0,3)}, ${endDateSplit[1].slice(0,3)} ${endDateSplit[2]} @ ${endTimeText}`;
+
       let eventName = name.replaceAll(' ', ' ').replace('PokéStop Showcases', 'Showcases').replace('5-star Raid Battles', '5* Raids').replace('in Shadow Raids', 'Raids').replace('in Mega Raids', 'Raids').replace('Community Day', 'CD');
 
       //Extra info
