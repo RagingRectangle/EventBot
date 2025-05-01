@@ -810,6 +810,7 @@ client.on('interactionCreate', async interaction => {
     } catch (error) {
       console.error(error);
     }
+    await interaction.deleteReply().catch(console.error);
   }
 }); //End of slash commands
 
