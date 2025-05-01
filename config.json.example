@@ -13,28 +13,13 @@
   "rerollText": "Quest Reroll 🎲",
   "bonus": true,
   "24Hour": false,
+  "links": true,
   "colors": {
     "current": "048900",
     "futureCD": "2A47FF",
     "futureRaid": "DD3131",
     "futureSpotCase": "6D2095",
+    "futureMaxBattle": "FFFF00",
     "futureOther": "CA7E00"
-  },
-  "months": {
-    "January": 2024,
-    "February": 2024,
-    "March": 2024,
-    "April": 2024,
-    "May": 2024,
-    "June": 2024,
-    "July": 2024,
-    "August": 2024,
-    "September": 2024,
-    "October": 2024,
-    "November": 2024,
-    "December": 2024
-  },
-  "eventTypesAll": ["Pokémon Spotlight Hour", "Raid Battles", "Event", "Community Day", "Season", "Raid Hour", "Elite Raids", "PokéStop Showcase", "Raid Day", "Ticketed Event", "Pokémon GO Tour"],
-  "eventTypesRaid": ["Raid Battles", "Raid Hour", "Raid Day", "Elite Raids"],
-  "eventTypesSpotCase": ["Pokémon Spotlight Hour", "PokéStop Showcase"]
+  }
 }

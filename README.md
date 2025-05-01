@@ -29,7 +29,7 @@ npm install
 
 **ignoreUnannounced:** Whether unannounced events are shown or not.
 
-**autoUpdate:** Update message automatically. Must press the update button 1 time to activate.
+**autoUpdate:** Update message automatically each hour.
 
 **hideUpdateButton:** Hide button if autoUpdate = true (Will hide after 1st press).
 
@@ -37,11 +37,19 @@ npm install
 
 **trashServerID:** A trash server where the bot can create/delete emojis. Needs `Manage Expressions` permission.
 
+**graphics:** Include links to event graphics when available.
+
+**questReroll:** Include message for events with quest rerolls.
+
+**rerollText:** Message to display for quest rerolls.
+
+**bonus:** Include what the spotlight bonus is.
+
+**24Hour:** Change times to 24 hour format.
+
+**links:** Change event names to links to event website.
+
 **colors:** Hex codes for embed colors.
-
-**months:** Years aren't included when scraping so this was my lazy solution. Will just need to update them every once in awhile.
-
-**eventTypes:** Can ignore these unless you don't want to include certain types or there are new ones in the future.
 
 
 ## Usage

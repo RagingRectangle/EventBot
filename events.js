@@ -26,16 +26,28 @@ var util = require('./util.json');
 var emojiList = {};
 var trashServer = '';
 
+//Config check
+let oldConfigs = ['months', 'eventTypesAll', 'eventTypesRaid', 'eventTypesSpotCase'];
+for (const [key, value] of Object.entries(config)) {
+  if (oldConfigs.includes(key)){
+    console.log(`config.json no longer requires the '${key}' section.`);
+  }
+}
+
+//Old file check
+if (fs.existsSync('./autoUpdates.json')){
+  console.log('autoUpdates.json is no longer used and can be deleted.')
+}
+
 //Shiny list check
 if (!fs.existsSync('./shinyList.json')) {
   fs.writeFileSync('./shinyList.json', '{}');
 }
 var shinyList = require('./shinyList.json');
 
-
 //Auto update check
-if (config.autoUpdate == true && !fs.existsSync('./autoUpdates.json')) {
-  fs.writeFileSync('./autoUpdates.json', '{}');
+if (config.autoUpdate == true && !fs.existsSync('./eventMessages.json')) {
+  fs.writeFileSync('./eventMessages.json', '{}');
 }
 
 //Emoji check
@@ -139,7 +151,7 @@ async function fetchLeekEvents(client) {
     $('.event-item-link').each((i, classEvent) => {
       let type = $(classEvent).find('p').first().text().replace('Ticketed', 'Ticketed Event');
       let link = $(classEvent).attr('href');
-      if (config.eventTypesAll.includes(type)) {
+      if (util.eventTypesAll.includes(type)) {
         eventLinks.push({
           type: type,
           link: link
@@ -160,6 +172,7 @@ async function scrapeLinks(client, eventLinks) {
   var futureEventsCDTemp = [];
   var futureEventsRaidTemp = [];
   var futureEventsSpotCaseTemp = [];
+  var futureEventsMaxBattleTemp = [];
   var futureEventsOtherTemp = [];
   for (var e in eventLinks) {
     try {
@@ -170,6 +183,9 @@ async function scrapeLinks(client, eventLinks) {
       if (name.startsWith(' ')) {
         name = name.slice(1, name.length);
       }
+      //Check for events with no end date
+      if ($('#event-date-end').text().replace(' ', '') == 'None') continue;
+
       //Start Time
       //[ 'Wednesday', 'September', '20' ]
       var startDateSplit = $('#event-date-start').text().replaceAll('\n', '').replaceAll(' ', ' ').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
@@ -192,8 +208,20 @@ async function scrapeLinks(client, eventLinks) {
         startTimeText = `${startHour}:00`;
       }
       startHour = ("0" + startHour).slice(-2);
+      //Solve for year
+      var startYear = moment().format('YYYY') * 1; //Set fallback to current year
+      let currentYear = moment().format('YYYY') * 1;
+      for (var y = currentYear - 1; y <= currentYear + 1; y++){
+        let testDate = moment(`${startDateSplit[2]} ${startDateSplit[1].slice(0,3)} ${y}`, 'LL');
+        let diffDays = Math.abs(moment().diff(testDate, 'days'));
+        if (diffDays < 180){
+          startYear = y;
+          break;
+        }
+      }//End of y loop
+
       //6 Mar 2017 21:22:23 GMT
-      let startTimeUnix = moment(`${startDateSplit[2]} ${startDateSplit[1].slice(0,3)} ${config.months[startDateSplit[1]]} ${startHour.replace(24, 12)}:00 GMT`).subtract(config.timezoneOffset, 'hours').format('X');
+      let startTimeUnix = moment(`${startDateSplit[2]} ${startDateSplit[1].slice(0,3)} ${startYear} ${startHour.replace(24, 12)}:00 GMT`).subtract(config.timezoneOffset, 'hours').format('X');
       let hoursUntilStart = (startTimeUnix - moment(new Date()).format('X')) / 60 / 60;
       let startText = `${startDateSplit[0].slice(0,3)}, ${startDateSplit[1].slice(0,3)} ${startDateSplit[2]} @ ${startTimeText}`;
 
@@ -223,8 +251,20 @@ async function scrapeLinks(client, eventLinks) {
         endTimeText = endHour;
       }
       endHour = ("0" + endHour).slice(-5);
+
+      //Solve for year
+      var endYear = moment().format('YYYY') * 1; //Set fallback to current year
+      for (var y = currentYear - 1; y <= currentYear + 1; y++){
+        let testDate = moment(`${endDateSplit[2]} ${endDateSplit[1].slice(0,3)} ${y}`, 'LL');
+        let diffDays = Math.abs(moment().diff(testDate, 'days'));
+        if (diffDays < 180){
+          endYear = y;
+          break;
+        }
+      }//End of y loop
+
       //6 Mar 2017 21:22:23 GMT
-      let endTimeUnix = moment(`${endDateSplit[2]} ${endDateSplit[1].slice(0,3)} ${config.months[endDateSplit[1]]} ${endHour} GMT`).subtract(config.timezoneOffset, 'hours').format('X');
+      let endTimeUnix = moment(`${endDateSplit[2]} ${endDateSplit[1].slice(0,3)} ${endYear} ${endHour} GMT`).subtract(config.timezoneOffset, 'hours').format('X');
       let hoursUntilEnd = (endTimeUnix - moment(new Date()).format('X')) / 60 / 60;
       var endText = `${endDateSplit[0].slice(0,3)}, ${endDateSplit[1].slice(0,3)} ${endDateSplit[2]} @ ${endTimeText}`;
 
@@ -237,23 +277,22 @@ async function scrapeLinks(client, eventLinks) {
         var graphicLinks = [];
         $('p').each((i, paragraph) => {
           var graphicLink = $(paragraph).find('img').attr('src');
-          if (graphicLink && graphicLink.startsWith('/assets/img/events/') && !graphicLink.includes('article-images')) {
-            graphicLink = `https://leekduck.com${graphicLink.replaceAll(' ', ' ').replaceAll(' ', '%20')}`;
+          if (graphicLink && !graphicLink.includes('article-images')) {
+            graphicLink = graphicLink.replaceAll(' ', ' ').replaceAll(' ', '%20');
             //Research graphic
             if (graphicLink.includes('Special%20Research')) {
               graphicLinks.push(`[Research](${graphicLink})`);
             }
             //Raid guide graphic
-            else if (graphicLink.includes('Raid%20Guide')) {
+            else if (util.eventTypesRaid.includes(eventLinks[e]['type'])){
               graphicLinks.push(`[Guide](${graphicLink})`);
             }
             //Parts
-            else if (graphicLink.includes('%20Part%20')) {
-              let linkSplit = graphicLink.replace('.jpg', '').replace('.png', '').split('%20');
-              if (Number.isInteger(linkSplit[linkSplit.length - 1] * 1)) {
-                graphicLinks.push(`[Part ${linkSplit[linkSplit.length - 1]}](${graphicLink})`);
-              } else {
-                graphicLinks.push(`[Overview](${graphicLink})`);
+            else if (graphicLink.replace('%20Page%20', '%20Part%20').includes('%20Part%20')) {
+              for (var i = 1; i < 5; i++){
+                if (graphicLink.replace('%20Page%20', '%20Part%20').includes(`%20Part%20${i}.`)){
+                  graphicLinks.push(`[Part ${i}](${graphicLink})`);
+                }
               }
             }
             //Overview graphic
@@ -286,15 +325,24 @@ async function scrapeLinks(client, eventLinks) {
         });
       } //End of questReroll
 
+      //Max Battle Pokemon
+      if (eventName.startsWith('Max Battles -')){
+        var maxPokemon = [];
+        $('.pkmn-name').each((index, element) => {
+          maxPokemon.push($(element).text());
+        });
+        extraInfo.push(`\n- ${maxPokemon.join(', ')}`);
+      }
+
       //Emojis
       if (trashServer) {
         //Community Day + mega raids + raid hour + 5* raids + raid day + showcases(single) + spotlights + elite raids
-        if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ') || eventName.endsWith(' Raid Hour') || eventName.endsWith(' in 5* Raids') || eventName.startsWith('Raid Day: ') || eventName.endsWith(' Showcases') || eventName.endsWith(' Spotlight Hour') || eventName.endsWith(' in Elite Raids')) {
+        if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ') || eventName.endsWith(' Raid Hour') || eventName.endsWith(' in 5* Raids') || eventName.startsWith('Raid Day: ') || eventName.endsWith(' Raid Day') || eventName.endsWith(' Showcases') || eventName.endsWith(' Spotlight Hour') || eventName.endsWith(' in Elite Raids') || eventName.endsWith(' Raids')) {
           var normalEmojiID = '';
           var normalEmoji = '';
           var shinyEmojiID = '';
           var shinyEmoji = '';
-          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Raids', '').replace(' Raid Hour', '').replace(' in 5*', '').replace('Raid Day: ', '').replace(' Showcases', '').replace(' Spotlight Hour', '').replace(' Raid Hour', '');
+          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Raids', '').replace(' Raid Hour', '').replace(' in 5*', '').replace('Raid Day: ', '').replace(' Raid Day', '').replace(' Showcases', '').replace(' Spotlight Hour', '').replace(' Shadow ', '').replace('Shadow ','');
           if (util[monName]) {
             //Check shiny status
             var shinyStatus = false;
@@ -371,12 +419,16 @@ async function scrapeLinks(client, eventLinks) {
           futureEventsCDTemp.push(event);
         }
         //Raid
-        else if (config.eventTypesRaid.includes(eventLinks[e]['type'])) {
+        else if (util.eventTypesRaid.includes(eventLinks[e]['type'])) {
           futureEventsRaidTemp.push(event);
         }
         //Spotlight/Showcase
-        else if (config.eventTypesSpotCase.includes(eventLinks[e]['type'])) {
+        else if (util.eventTypesSpotCase.includes(eventLinks[e]['type'])) {
           futureEventsSpotCaseTemp.push(event);
+        }
+        //Max Battles
+        else if (util.eventTypesMaxBattle.includes(eventLinks[e]['type'])) {
+          futureEventsMaxBattleTemp.push(event);
         }
         //Other
         else {
@@ -409,8 +461,8 @@ async function scrapeLinks(client, eventLinks) {
   currentEvents = [...new Map(currentEvents.map(v => [JSON.stringify(v), v])).values()]
   var currentDescription = ['## **__Current Events:__**'];
   for (var c in currentEvents) {
-    //Skip Leek links
-    if (currentEventsTemp.type == 'Pokémon Spotlight Hour' || currentEventsTemp.type == 'Raid Hour' || currentEventsTemp.type == 'PokéStop Showcase') {
+    //Skip links
+    if (config.links == false){
       currentDescription.push(`${currentEvents[c]['name']}\n- Ends ${currentEvents[c]['endText']} <t:${currentEvents[c]['endTimeUnix']}:R>${currentEvents[c]['extraInfo']}`);
     }
     //Include link
@@ -440,11 +492,11 @@ async function scrapeLinks(client, eventLinks) {
   for (var f in futureEventsRaid) {
     //Raid Hour
     if (futureEventsRaid[f]['type'] == 'Raid Hour') {
-      futureDescriptionRaid.push(`${futureEventsRaid[f]['name']}\n- Starts ${futureEventsRaid[f]['startText']} <t:${futureEventsRaid[f]['startTimeUnix']}:R>${futureEventsRaid[f]['extraInfo']}`);
+      futureDescriptionRaid.push(`[${futureEventsRaid[f]['name']}](${futureEventsRaid[f]['link']})\n- Starts ${futureEventsRaid[f]['startText']} <t:${futureEventsRaid[f]['startTimeUnix']}:R>${futureEventsRaid[f]['extraInfo']}`);
     } else {
       futureDescriptionRaid.push(`[${futureEventsRaid[f]['name']}](${futureEventsRaid[f]['link']})\n- Starts ${futureEventsRaid[f]['startText']} <t:${futureEventsRaid[f]['startTimeUnix']}:R>\n- Ends ${futureEventsRaid[f]['endText']} <t:${futureEventsRaid[f]['endTimeUnix']}:R>${futureEventsRaid[f]['extraInfo']}`);
     }
-    if (futureDescriptionRaid.join('\n\n').length > 3000) {
+    if (futureDescriptionRaid.join('\n\n').length > 3950) {
       futureDescriptionRaid.pop();
       break;
     }
@@ -458,12 +510,27 @@ async function scrapeLinks(client, eventLinks) {
   futureEventsSpotCase = [...new Map(futureEventsSpotCase.map(v => [JSON.stringify(v), v])).values()]
   var futureDescriptionSpotCase = ['## **__Upcoming Spotlights/Showcases:__**'];
   for (var f in futureEventsSpotCase) {
-    futureDescriptionSpotCase.push(`${futureEventsSpotCase[f]['name']}\n- Starts ${futureEventsSpotCase[f]['startText']} <t:${futureEventsSpotCase[f]['startTimeUnix']}:R>${futureEventsSpotCase[f]['extraInfo']}`);
-    if (futureDescriptionSpotCase.join('\n\n').length > 3000) {
+    futureDescriptionSpotCase.push(`[${futureEventsSpotCase[f]['name']}](${futureEventsSpotCase[f]['link']})\n- Starts ${futureEventsSpotCase[f]['startText']} <t:${futureEventsSpotCase[f]['startTimeUnix']}:R>${futureEventsSpotCase[f]['extraInfo']}`);
+    if (futureDescriptionSpotCase.join('\n\n').length > 3950) {
       futureDescriptionSpotCase.pop();
       break;
     }
   } //End of f loop
+
+  //Future Max Battle
+  var futureEventsMaxBattle = _.sortBy(futureEventsMaxBattleTemp,
+    [function (f) {
+      return f.startTimeUnix
+    }]);
+    futureEventsMaxBattle = [...new Map(futureEventsMaxBattle.map(v => [JSON.stringify(v), v])).values()]
+    var futureDescriptionMaxBattle = ['## **__Upcoming Max Battles:__**'];
+    for (var f in futureEventsMaxBattle) {
+      futureDescriptionMaxBattle.push(`[${futureEventsMaxBattle[f]['name']}](${futureEventsMaxBattle[f]['link']})\n- Starts ${futureEventsMaxBattle[f]['startText']} <t:${futureEventsMaxBattle[f]['startTimeUnix']}:R>${futureEventsMaxBattle[f]['extraInfo']}`);
+      if (futureDescriptionMaxBattle.join('\n\n').length > 3950) {
+        futureDescriptionMaxBattle.pop();
+        break;
+      }
+    } //End of f loop
 
   //Future Other
   var futureEventsOther = _.sortBy(futureEventsOtherTemp,
@@ -486,6 +553,7 @@ async function scrapeLinks(client, eventLinks) {
     futureCD: futureDescriptionCD,
     futureRaid: futureDescriptionRaid,
     futureSpotCase: futureDescriptionSpotCase,
+    futureMaxBattle: futureDescriptionMaxBattle,
     futureOther: futureDescriptionOther
   }
   fs.writeFileSync('./events.json', JSON.stringify(eventObj));
@@ -493,31 +561,41 @@ async function scrapeLinks(client, eventLinks) {
 
 
 async function cronUpdates() {
-  let eventEmbeds = await createEmbeds();
-  if (eventEmbeds == []) {
+  let messageEmbeds = await createEmbeds();
+  if (messageEmbeds == []) {
     return;
   }
-  var autoMessages = JSON.parse(fs.readFileSync('./autoUpdates.json'));
-  for (const [msgID, channelID] of Object.entries(autoMessages)) {
+  var eventMessages = JSON.parse(fs.readFileSync('./eventMessages.json'));
+
+  for (const [channelId, messages] of Object.entries(eventMessages)) {
     try {
-      let channel = await client.channels.fetch(channelID).catch(console.error);
-      let message = await channel.messages.fetch(msgID);
-      var eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary));
-      if (config.emojiID) {
-        eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary).setEmoji(config.emojiID));
-      }
-      var components = [eventComponent];
-      if (config.autoUpdate == true && config.hideUpdateButton == true) {
-        components = [];
-      }
-      message.edit({
-        embeds: eventEmbeds,
-        components: components
-      }).catch(console.error);
+      let channel = await client.channels.fetch(channelId).catch(console.error);
+
+      for (const [messageType, messageId] of Object.entries(messages)){
+        let message = await channel.messages.fetch(messageId);
+        let newEmbed = messageEmbeds[messageType];
+
+        if (messageType == 'futureOther' && config.hideUpdateButton == false){
+          var refreshButton = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBotRefresh~${channelId}`).setStyle(ButtonStyle.Primary));
+          if (config.emojiID) {
+            refreshButton = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBotRefresh~${channelId}`).setStyle(ButtonStyle.Primary).setEmoji(config.emojiID));
+          }
+          await message.edit({
+            embeds: [newEmbed],
+            components: [refreshButton]
+          }).catch(console.error);
+        }
+        else {
+          await message.edit({
+            embeds: [newEmbed]
+          }).catch(console.error);
+        }
+        await new Promise(done => setTimeout(done, 500));
+      }//End of messages loop
     } catch (err) {
       console.log(err);
     }
-  } //End of message loop
+  } //End of channel loop
 } //End of cronUpdates()
 
 
@@ -533,39 +611,59 @@ client.on('interactionCreate', async interaction => {
     return;
   }
   let user = interaction.member;
-  await interaction.deferReply({
-    ephemeral: true
-  }).catch(console.error);
-  if (interaction.customId == `eventBot~refresh`) {
+
+  if (interaction.customId.startsWith(`eventBotRefresh~`)) {
+    await interaction.deleteReply().catch(console.error);
     try {
-      let eventEmbeds = await createEmbeds();
-      if (eventEmbeds == []) {
+      let eventMessages = JSON.parse(fs.readFileSync('./eventMessages.json'));
+      let channelId = interaction.customId.replace(`eventBotRefresh~`, '');
+      let messageData = eventMessages[channelId];
+      if (!messageData){
+        console.log(`Refresh button pressed for unknown message in channel ${channelId}`);
         return;
       }
-      if (config.autoUpdate == true && config.hideUpdateButton == true) {
-        await interaction.message.edit({
-          embeds: eventEmbeds,
-          components: []
-        }).catch(console.error);
-      } else {
-        await interaction.message.edit({
-          embeds: eventEmbeds
-        }).catch(console.error);
+      let messageEmbeds = await createEmbeds();
+      if (messageEmbeds == []) {
+        return;
       }
-    } catch (err) {
+      for (const [messageType, messageId] of Object.entries(messageData)){
+        var refreshButton = '';
+        if (messageType == 'futureOther' && config.hideUpdateButton == false){
+          refreshButton = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBotRefresh~${channelId}`).setStyle(ButtonStyle.Primary));
+          if (config.emojiID) {
+            refreshButton = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBotRefresh~${channelId}`).setStyle(ButtonStyle.Primary).setEmoji(config.emojiID));
+          }
+        }
+        await updateMessage(channelId, messageId, messageEmbeds[messageType], refreshButton);
+      }
+    }
+    catch(err){
       console.log(err);
     }
-    await interaction.deleteReply().catch(console.error);
 
-    //Check auto update
-    if (config.autoUpdate == true) {
-      var autoMessages = JSON.parse(fs.readFileSync('./autoUpdates.json'));
-      //New auto update
-      if (!autoMessages[interaction.message.id]) {
-        autoMessages[interaction.message.id] = interaction.message.channel.id;
-        fs.writeFileSync('./autoUpdates.json', JSON.stringify(autoMessages));
+    async function updateMessage(channelId, messageId, messageEmbed, refreshButton){
+      try{
+        let channel = await client.channels.fetch(channelId).catch(console.error);
+        let message = await channel.messages.fetch(messageId);
+
+        if (refreshButton == ''){
+          await message.edit({
+            embeds: [messageEmbed],
+          }).catch(console.error);
+        }
+        else {
+          await message.edit({
+            embeds: [messageEmbed],
+            components: [refreshButton]
+          }).catch(console.error);
+        }
+        return;
       }
-    }
+      catch(err){
+        console.log(err);
+      }
+      return;
+    }//End of updateMessage()
   }
 }); //End of buttons/lists
 
@@ -607,33 +705,37 @@ async function deleteEmojis(oldEmojis) {
 
 
 async function createEmbeds() {
-  var embeds = [];
   try {
+    var messageEmbeds = {};
     var eventJSON = JSON.parse(fs.readFileSync('./events.json'));
     var currentEmbed = new EmbedBuilder()
       .setColor(config.colors.current)
       .setDescription(eventJSON.current.length == 1 ? `${eventJSON.current[0]}\n\nN/A` : eventJSON.current.join('\n\n'));
-    embeds.push(currentEmbed);
+      messageEmbeds.current = currentEmbed;
     var futureCDEmbed = new EmbedBuilder()
       .setColor(config.colors.futureCD)
       .setDescription(eventJSON.futureCD.length == 1 ? `${eventJSON.futureCD[0]}\n\nN/A` : eventJSON.futureCD.join('\n\n'));
-    embeds.push(futureCDEmbed);
+      messageEmbeds.futureCD = futureCDEmbed;
     var futureRaidEmbed = new EmbedBuilder()
       .setColor(config.colors.futureRaid)
       .setDescription(eventJSON.futureRaid.length == 1 ? `${eventJSON.futureRaid[0]}\n\nN/A` : eventJSON.futureRaid.join('\n\n'));
-    embeds.push(futureRaidEmbed);
-    var futureSpotCaseEmbed = new EmbedBuilder()
+      messageEmbeds.futureRaid = futureRaidEmbed;
+      var futureSpotCaseEmbed = new EmbedBuilder()
       .setColor(config.colors.futureSpotCase)
       .setDescription(eventJSON.futureSpotCase.length == 1 ? `${eventJSON.futureSpotCase[0]}\n\nN/A` : eventJSON.futureSpotCase.join('\n\n'));
-    embeds.push(futureSpotCaseEmbed);
+      messageEmbeds.futureSpotCase = futureSpotCaseEmbed;
+      var futureMaxBattleEmbed = new EmbedBuilder()
+      .setColor(config.colors.futureMaxBattle ? config.colors.futureMaxBattle : 'FFFF00')
+      .setDescription(eventJSON.futureMaxBattle.length == 1 ? `${eventJSON.futureMaxBattle[0]}\n\nN/A` : eventJSON.futureMaxBattle.join('\n\n'));
+      messageEmbeds.futureMaxBattle = futureMaxBattleEmbed;
+
     var futureOtherEmbed = new EmbedBuilder()
       .setColor(config.colors.futureOther)
       .setDescription(eventJSON.futureOther.join('\n\n'))
       .setTimestamp();
-    if (eventJSON.futureOther.length > 1) {
-      embeds.push(futureOtherEmbed);
-    }
-    return embeds;
+      messageEmbeds.futureOther = futureOtherEmbed;
+      
+    return messageEmbeds;
   } catch (err) {
     console.log(err);
     return [];
@@ -658,21 +760,53 @@ client.on('interactionCreate', async interaction => {
     return;
   }
   await interaction.deferReply().catch(console.error);
+
   if (interaction.commandName == 'events') {
+    var eventMessages = JSON.parse(fs.readFileSync('./eventMessages.json'));
+    let channelId = interaction.channelId;
     try {
-      let eventEmbeds = await createEmbeds();
-      if (eventEmbeds == []) {
+      for (const [msgChannel, messages] of Object.entries(eventMessages)) {
+        if (channelId == msgChannel){
+          delete eventMessages.msgChannel;
+        }
+      }
+      let messageEmbeds = await createEmbeds();
+      if (messageEmbeds == []) {
         return;
       }
-      var eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary));
-      if (config.emojiID) {
-        eventComponent = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBot~refresh`).setStyle(ButtonStyle.Primary).setEmoji(config.emojiID));
+      var messageData = {};
+      let messageTypes = ['current', 'futureCD', 'futureRaid', 'futureSpotCase', 'futureMaxBattle', 'futureOther'];
+      for (var m = 0; m < messageTypes.length; m++){
+        var refreshButton = '';
+        if (messageTypes[m] == 'futureOther' && config.hideUpdateButton == false){
+          refreshButton = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBotRefresh~${channelId}`).setStyle(ButtonStyle.Primary));
+          if (config.emojiID) {
+            refreshButton = new ActionRowBuilder().addComponents(new ButtonBuilder().setLabel(config.buttonLabel).setCustomId(`eventBotRefresh~${channelId}`).setStyle(ButtonStyle.Primary).setEmoji(config.emojiID));
+          }
+        }
+        let messageId = await sendMessage(messageEmbeds[messageTypes[m]], refreshButton);
+        messageData[messageTypes[m]] = messageId;
+        await new Promise(done => setTimeout(done, 500));
       }
-      var components = [eventComponent];
-      await interaction.editReply({
-        embeds: eventEmbeds,
-        components: components
-      }).catch(console.error);
+
+      eventMessages[channelId] = messageData;
+      fs.writeFileSync('./eventMessages.json', JSON.stringify(eventMessages));
+
+      async function sendMessage(messageEmbed, refreshButton){
+        if (refreshButton == ''){
+          let sentMessage = await interaction.channel.send({
+            embeds: [messageEmbed],
+          }).catch(console.error);
+          return sentMessage.id;
+        }
+        else {
+          let sentMessage = await interaction.channel.send({
+            embeds: [messageEmbed],
+            components: [refreshButton]
+          }).catch(console.error);
+          return sentMessage.id;
+        }
+      }//End of sendMessage()
     } catch (error) {
       console.error(error);
     }
