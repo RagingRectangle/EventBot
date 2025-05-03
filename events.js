@@ -491,7 +491,6 @@ async function scrapeLinks(client, eventLinks) {
   fs.writeFileSync('./events.json', JSON.stringify(eventObj));
 } //End of scrapeLinks()
 
-
 async function cronUpdates() {
   let eventEmbeds = await createEmbeds();
   if (eventEmbeds == []) {
@@ -519,7 +518,6 @@ async function cronUpdates() {
     }
   } //End of message loop
 } //End of cronUpdates()
-
 
 //Buttons and Lists
 client.on('interactionCreate', async interaction => {
@@ -569,26 +567,27 @@ client.on('interactionCreate', async interaction => {
   }
 }); //End of buttons/lists
 
-
 async function createEmoji(dexIndex) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let emojiLink = `https://github.com/RagingRectangle/Pokemojis/blob/main/pokemon/${dexIndex}.gif?raw=true`;
-      await trashServer.emojis.create({
-          attachment: emojiLink,
-          name: dexIndex
-        })
-        .then(emoji => {
-          console.log(`${dexIndex} created: ${emoji.id}`);
-          return resolve(emoji.id);
-        });
-    } catch (err) {
-      console.log(err);
-      return resolve(`ERROR`);
-    }
-  });
-}; //End of createEmoji()
+  try {
+    const emojiLink = `https://raw.githubusercontent.com/RagingRectangle/Pokemojis/main/pokemon/${dexIndex}.gif`;
 
+    const response = await fetch(emojiLink);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const imageBuffer = await response.buffer();
+
+    const emoji = await trashServer.emojis.create({
+      attachment: imageBuffer,
+      name: dexIndex
+    });
+
+    console.log(`${dexIndex} created: ${emoji.id}`);
+    return emoji.id;
+
+  } catch (err) {
+    console.error(`Failed to create emoji for ${dexIndex}:`, err.message);
+    return `ERROR`;
+  }
+}; //End of createEmoji()
 
 async function deleteEmojis(oldEmojis) {
   for (var i in oldEmojis) {
