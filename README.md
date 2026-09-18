@@ -21,8 +21,6 @@ npm install
 ## Config Setup
 **Token:** Discord token for bot.
 
-**timezoneOffset:** Also used for the last updated date in the footer.
-
 **emojiID:** ID of an emoji if you want it included in the button.
 
 **buttonLabel:** Text shown on the update button.
@@ -50,6 +48,8 @@ npm install
 **links:** Change event names to links to event website.
 
 **colors:** Hex codes for embed colors.
+
+**ignoreTypes:** Array of event types to ignore. Full list at util.eventTypesAll.
 
 
 ## Usage

@@ -1304,7 +1304,7 @@
   "Gimmighoul": "999",
   "Gimmighoul Normal": "999_f2998",
   "Mega Blastoise": "9_e1",
-  "eventTypesAll": ["Pokémon Spotlight Hour", "Raid Battles", "Event", "Community Day", "Season", "Raid Hour", "Elite Raids", "PokéStop Showcase", "Raid Day", "Ticketed Event", "Pokémon GO Tour", "GO Pass", "Max Battles", "Max Mondays"],
+  "eventTypesAll": ["Pokémon Spotlight Hour", "Raid Battles", "Event", "Community Day", "Season", "Raid Hour", "Elite Raids", "PokéStop Showcase", "Raid Day", "Ticketed Event", "Pokémon GO Tour", "GO Pass", "Max Battles", "Max Mondays", "Wild Area", "Choose Your Path", "Season"],
   "eventTypesRaid": ["Raid Battles", "Raid Hour", "Raid Day", "Elite Raids"],
   "eventTypesSpotCase": ["Pokémon Spotlight Hour", "PokéStop Showcase"],
   "eventTypesMaxBattle": ["Max Battles", "Max Mondays"]

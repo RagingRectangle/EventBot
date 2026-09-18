@@ -25,18 +25,27 @@ var config = require('./config.json');
 var util = require('./util.json');
 var emojiList = {};
 var trashServer = '';
+var newEventTypes = [];
 
 //Config check
-let oldConfigs = ['months', 'eventTypesAll', 'eventTypesRaid', 'eventTypesSpotCase'];
+let oldConfigs = ['months', 'eventTypesAll', 'eventTypesRaid', 'eventTypesSpotCase', 'timezoneOffset'];
 for (const [key, value] of Object.entries(config)) {
   if (oldConfigs.includes(key)){
     console.log(`config.json no longer requires the '${key}' section.`);
   }
 }
+if (!config.ignoreTypes){
+  console.log(`New config option available: 'ignoreTypes'. Array of event types to ignore. Full list at util.eventTypesAll`);
+}
 
 //Old file check
 if (fs.existsSync('./autoUpdates.json')){
   console.log('autoUpdates.json is no longer used and can be deleted.')
+}
+
+//Event json check
+if (!fs.existsSync('./events.json')) {
+  fs.writeFileSync('./events.json', '{}');
 }
 
 //Shiny list check
@@ -148,7 +157,12 @@ async function fetchLeekEvents(client) {
     const body = await response.text();
     const $ = cheerio.load(body);
     var eventLinks = [];
+    newEventTypes = [];
     $('.event-item-link').each((i, classEvent) => {
+      let classAttr = $(classEvent).attr('class') || '';
+      if (classAttr.includes('-ended')) {
+        return;
+      }
       let type = $(classEvent).find('p').first().text().replace('Ticketed', 'Ticketed Event');
       let link = $(classEvent).attr('href');
       if (util.eventTypesAll.includes(type)) {
@@ -156,6 +170,9 @@ async function fetchLeekEvents(client) {
           type: type,
           link: link
         });
+      }
+      else if (type && !newEventTypes.includes(type)) {
+        newEventTypes.push(type);
       }
     });
     eventLinks = _.uniqBy(eventLinks, 'link');
@@ -179,94 +196,47 @@ async function scrapeLinks(client, eventLinks) {
       let eventResponse = await fetch(`https://leekduck.com${eventLinks[e]['link']}`);
       const body = await eventResponse.text();
       const $ = cheerio.load(body);
-      var name = $('.page-title').text();
-      if (name.startsWith(' ')) {
-        name = name.slice(1, name.length);
+      var name = $('.page-title').text().trim();
+
+      //Parse embedded schedule JSON (replaces old #event-date-start/#event-time-start etc.)
+      var scheduleJSON = {};
+      try {
+        scheduleJSON = JSON.parse($('script[data-event-schedule-json]').first().text());
+      } catch (err) {
+        //No schedule block (non-local/Tour events) -> skip like the old check did
+        continue;
       }
-      //Check for events with no end date
-      if ($('#event-date-end').text().replace(' ', '') == 'None') continue;
-
-      //Start Time
-      //[ 'Wednesday', 'September', '20' ]
-      var startDateSplit = $('#event-date-start').text().replaceAll('\n', '').replaceAll(' ', ' ').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
-      startDateSplit = startDateSplit.filter(a => a);
-      //[ '6', 'PM', 'Local Time' ]
-      let startTimeSplit = $('#event-time-start').text().replaceAll(' ', ' ').replace('at ', '').replace(':00', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
-
-      ////Check for non-local events (Tours)
-      if (startTimeSplit.length < 2) {
+      //Skip non-local events (Tours) - no _local wall-clock times
+      if (!scheduleJSON.envelope || !scheduleJSON.envelope.start_local || !scheduleJSON.envelope.end_local) {
         continue;
       }
 
-      startTimeSplit = startTimeSplit.filter(a => a);
-      var startHour = startTimeSplit[0] * 1;
-      if (startTimeSplit[1] == 'PM' && startTimeSplit[0] != 12) {
-        startHour = startHour + 12;
-      }
-      var startTimeText = `${startTimeSplit[0]} ${startTimeSplit[1]}`;
-      if (config['24Hour'] == true) {
-        startTimeText = `${startHour}:00`;
-      }
-      startHour = ("0" + startHour).slice(-2);
-      //Solve for year
-      var startYear = moment().format('YYYY') * 1; //Set fallback to current year
-      let currentYear = moment().format('YYYY') * 1;
-      for (var y = currentYear - 1; y <= currentYear + 1; y++){
-        let testDate = moment(`${startDateSplit[2]} ${startDateSplit[1].slice(0,3)} ${y}`, 'LL');
-        let diffDays = Math.abs(moment().diff(testDate, 'days'));
-        if (diffDays < 180){
-          startYear = y;
-          break;
-        }
-      }//End of y loop
-
-      //6 Mar 2017 21:22:23 GMT
-      let startTimeUnix = moment(`${startDateSplit[2]} ${startDateSplit[1].slice(0,3)} ${startYear} ${startHour.replace(24, 12)}:00 GMT`).subtract(config.timezoneOffset, 'hours').format('X');
-      let hoursUntilStart = (startTimeUnix - moment(new Date()).format('X')) / 60 / 60;
-      let startText = `${startDateSplit[0].slice(0,3)}, ${startDateSplit[1].slice(0,3)} ${startDateSplit[2]} @ ${startTimeText}`;
-
-      //End Time
-      //[ 'Wednesday', 'September', '20' ]
-      let endDateSplit = $('#event-date-end').text().replaceAll('\n', '').replaceAll(' ', ' ').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
-      endDateSplit = endDateSplit.filter(a => a);
-      //[ '6', 'PM', 'Local Time' ]
-      let endTimeSplit = $('#event-time-end').text().replace('at', '').replaceAll(' ', ' ').replace(':00', '').replace(':59', '').replace(':45', '').replaceAll('\n', '').replaceAll('  ', ' ').replaceAll(',', '').replaceAll('  ', ' ').split(' ');
-      endTimeSplit = endTimeSplit.filter(a => a);
-      var endHour = endTimeSplit[0] * 1;
-      if (endTimeSplit[1] == 'PM') {
-        endHour = endHour + 12;
-      }
-      if ($('#event-time-end').text().includes(':59')) {
-        endHour = `${endHour}:59`;
-      } else if ($('#event-time-end').text().includes(':45')) {
-        endHour = `${endHour}:45`;
+      //Absolute instants for <t:...:R>
+      var startMoment, endMoment;
+      if (scheduleJSON.local_time === true) {
+        //Local-time event: anchor the bare wall-clock to the MACHINE's zone,
+        //so the instant lands on that wall-clock time for the bot's audience.
+        startMoment = moment(scheduleJSON.envelope.start_local);
+        endMoment   = moment(scheduleJSON.envelope.end_local);
       } else {
-        endHour = `${endHour}:00`;
+        //Global event: start/end carry a real UTC offset -> use it directly.
+        startMoment = moment.parseZone(scheduleJSON.envelope.start);
+        endMoment   = moment.parseZone(scheduleJSON.envelope.end);
       }
-      var endTimeText = `${endTimeSplit[0]} ${endTimeSplit[1]}`;
-      if ($('#event-time-end').text().includes(':59')) {
-        endTimeText = `${endTimeSplit[0]}:59 ${endTimeSplit[1]}`;
-      }
-      if (config['24Hour'] == true) {
-        endTimeText = endHour;
-      }
-      endHour = ("0" + endHour).slice(-5);
+      var startTimeUnix = startMoment.format('X');
+      var endTimeUnix = endMoment.format('X');
+      var hoursUntilStart = (startTimeUnix - moment(new Date()).format('X')) / 60 / 60;
+      var hoursUntilEnd = (endTimeUnix - moment(new Date()).format('X')) / 60 / 60;
 
-      //Solve for year
-      var endYear = moment().format('YYYY') * 1; //Set fallback to current year
-      for (var y = currentYear - 1; y <= currentYear + 1; y++){
-        let testDate = moment(`${endDateSplit[2]} ${endDateSplit[1].slice(0,3)} ${y}`, 'LL');
-        let diffDays = Math.abs(moment().diff(testDate, 'days'));
-        if (diffDays < 180){
-          endYear = y;
-          break;
-        }
-      }//End of y loop
+      //Bare wall-clock strings from start_local/end_local (used for static display text).
+      //Parsed with moment.utc() so the numbers are formatted as-is with NO zone shift.
+      var startLocalMoment = moment.utc(scheduleJSON.envelope.start_local);
+      var endLocalMoment   = moment.utc(scheduleJSON.envelope.end_local);
 
-      //6 Mar 2017 21:22:23 GMT
-      let endTimeUnix = moment(`${endDateSplit[2]} ${endDateSplit[1].slice(0,3)} ${endYear} ${endHour} GMT`).subtract(config.timezoneOffset, 'hours').format('X');
-      let hoursUntilEnd = (endTimeUnix - moment(new Date()).format('X')) / 60 / 60;
-      var endText = `${endDateSplit[0].slice(0,3)}, ${endDateSplit[1].slice(0,3)} ${endDateSplit[2]} @ ${endTimeText}`;
+      var startTimeText = config['24Hour'] == true ? startLocalMoment.format('HH:mm') : startLocalMoment.format('h A');
+      var endTimeText   = config['24Hour'] == true ? endLocalMoment.format('HH:mm') : endLocalMoment.format('h A');
+      var startText = `${startLocalMoment.format('ddd, MMM D')} @ ${startTimeText}`;
+      var endText   = `${endLocalMoment.format('ddd, MMM D')} @ ${endTimeText}`;
 
       let eventName = name.replaceAll(' ', ' ').replace('PokéStop Showcases', 'Showcases').replace('5-star Raid Battles', '5* Raids').replace('in Shadow Raids', 'Raids').replace('in Mega Raids', 'Raids').replace('Community Day', 'CD');
 
@@ -342,8 +312,7 @@ async function scrapeLinks(client, eventLinks) {
           var normalEmoji = '';
           var shinyEmojiID = '';
           var shinyEmoji = '';
-          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Raids', '').replace(' Raid Hour', '').replace(' in 5*', '').replace('Raid Day: ', '').replace(' Raid Day', '').replace(' Showcases', '').replace(' Spotlight Hour', '').replace(' Shadow ', '').replace('Shadow ','');
-          if (util[monName]) {
+          var monName = eventName.replace(' CD Classic', '').replace(' CD', '').replace(' Super Mega', '').replace(' Raids', '').replace(' Raid Hour', '').replace(' in 5*', '').replace('Raid Day: ', '').replace(' Raid Day', '').replace(' Showcases', '').replace(' Spotlight Hour', '').replace(' Shadow ', '').replace('Shadow ','');          if (util[monName]) {
             //Check shiny status
             var shinyStatus = false;
             if (eventLinks[e]['type'] == 'Community Day' || eventName.startsWith('Mega ')) {
@@ -419,15 +388,13 @@ async function scrapeLinks(client, eventLinks) {
           futureEventsCDTemp.push(event);
         }
         //Raid
-        else if (util.eventTypesRaid.includes(eventLinks[e]['type'])) {
+        else if (util.eventTypesRaid && util.eventTypesRaid.includes(eventLinks[e]['type'])) {
           futureEventsRaidTemp.push(event);
         }
-        //Spotlight/Showcase
-        else if (util.eventTypesSpotCase.includes(eventLinks[e]['type'])) {
+        else if (util.eventTypesSpotCase && util.eventTypesSpotCase.includes(eventLinks[e]['type'])) {
           futureEventsSpotCaseTemp.push(event);
         }
-        //Max Battles
-        else if (util.eventTypesMaxBattle.includes(eventLinks[e]['type'])) {
+        else if (util.eventTypesMaxBattle && util.eventTypesMaxBattle.includes(eventLinks[e]['type'])) {
           futureEventsMaxBattleTemp.push(event);
         }
         //Other
@@ -557,6 +524,10 @@ async function scrapeLinks(client, eventLinks) {
     futureOther: futureDescriptionOther
   }
   fs.writeFileSync('./events.json', JSON.stringify(eventObj));
+
+  if (newEventTypes.length > 0) {
+    console.log(`New event type found: ${newEventTypes.join(', ')}. Please inform @RagingRectangle so they can push new update`);
+  }
 } //End of scrapeLinks()
 
 
@@ -568,6 +539,7 @@ async function cronUpdates() {
   var eventMessages = JSON.parse(fs.readFileSync('./eventMessages.json'));
 
   for (const [channelId, messages] of Object.entries(eventMessages)) {
+    console.log(`Channel: ${channelId} || Message: ${messages}`)
     try {
       let channel = await client.channels.fetch(channelId).catch(console.error);
 

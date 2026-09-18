@@ -1,6 +1,5 @@
 {
   "token": "",
-  "timezoneOffset": 0,
   "emojiID": "",
   "buttonLabel": "Update Events",
   "ignoreUnannounced": false,
@@ -21,5 +20,6 @@
     "futureSpotCase": "6D2095",
     "futureMaxBattle": "FFFF00",
     "futureOther": "CA7E00"
-  }
+  },
+  "ignoreTypes": []
 }
