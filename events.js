@@ -683,22 +683,25 @@ client.on('interactionCreate', async interaction => {
 
 
 async function createEmoji(dexIndex) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let emojiLink = `https://github.com/RagingRectangle/Pokemojis/blob/main/pokemon/${dexIndex}.gif?raw=true`;
-      await trashServer.emojis.create({
-          attachment: emojiLink,
-          name: dexIndex
-        })
-        .then(emoji => {
-          console.log(`${dexIndex} created: ${emoji.id}`);
-          return resolve(emoji.id);
-        });
-    } catch (err) {
-      console.log(err);
-      return resolve(`ERROR`);
-    }
-  });
+   try {
+    const emojiLink = `https://raw.githubusercontent.com/RagingRectangle/Pokemojis/main/pokemon/${dexIndex}.gif`;
+
+    const response = await fetch(emojiLink);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const imageBuffer = await response.buffer();
+
+    const emoji = await trashServer.emojis.create({
+      attachment: imageBuffer,
+      name: dexIndex
+    });
+
+    console.log(`${dexIndex} created: ${emoji.id}`);
+    return emoji.id;
+
+  } catch (err) {
+    console.error(`Failed to create emoji for ${dexIndex}:`, err.message);
+    return `ERROR`;
+  }
 }; //End of createEmoji()
 
 
