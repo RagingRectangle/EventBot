@@ -179,11 +179,23 @@ async function fetchLeekEvents(client) {
   }
 } //End of fetchLeekEvents()
 
+function formatTimestamp(template, staticText, unix) {
+  if (!template) return '';
+  let str = template.replace('{d}', staticText);
+  str = str.replace(/<([a-zA-Z])>/g, (match, p1) => `<t:${unix}:${p1}>`);
+  // Prepend "- " if the user didn't include it
+  if (!str.startsWith('- ')) {
+    str = '- ' + str;
+  }
+  return str;
+}
+
 function buildSection(header, events, opts) {
   const maxLen = opts.maxLen || 4000;
   const showStart = opts.showStart !== false;
   const showEnd = opts.showEnd !== false;
   const links = opts.links !== false;
+  const thresholdMs = (config.countdownThresholdHours || 24) * 60 * 60 * 1000;
 
   //Reset per-run flags
   for (const e of events) {
@@ -193,23 +205,52 @@ function buildSection(header, events, opts) {
   }
 
   const renderEntry = (e) => {
-    const title = (links && e._link && !(e.tbaStart && e.tbaEnd)) ? `[${e.name}](${e.link})` : e.name;
+    const fmt = config.formatting || {};
+    const now = Date.now();
+    const isRaidHour = e.type === 'Raid Hour';
+
+    const title = (links && !(e.tbaStart && e.tbaEnd)) ? `[${e.name}](${e.link})` : e.name;
     const lines = [title];
 
-    const isRaidHour = e.type === 'Raid Hour';
     if (e.tbaStart && e.tbaEnd) {
-      //Fully TBA — collapse to a single line
       lines.push('- Starts: TBA');
     } else {
-      if (!e.tbaStart && showStart) {
-        let s = `- Starts ${e.startText}`;
-        if (e._startR) s += ` <t:${e.startTimeUnix}:R>`;
-        lines.push(s);
+      // Start Line
+      if (!e.tbaStart && opts.showStart) {
+        // Determine if we should use the countdown format
+        const useStartCountdown = (now - e.startTimeUnix * 1000) > -thresholdMs;
+        const hasStarted = now >= e.startTimeUnix * 1000;
+        
+        // Only show start line if it hasn't started yet
+        if (!hasStarted) {
+          if (useStartCountdown && fmt.startCountdown) {
+            lines.push(formatTimestamp(fmt.startCountdown, e.startText, e.startTimeUnix));
+          } else {
+            const template = fmt.startDate || "Starts {d} <R>";
+            let s = formatTimestamp(template, e.startText, e.startTimeUnix);
+            // Respect _startR flag for shrinking
+            if (!e._startR) s = s.replace(/ <[a-zA-Z]>/g, ''); 
+            lines.push(s);
+          }
+        }
+      } else if (e.tbaStart && opts.showStart) {
+        // Start is TBA, but End is known. We only show the End line.
       }
-      if (showEnd && !(isRaidHour && showStart)) {
-        let en = `- Ends ${e.endText}`;
-        if (e._endR) en += ` <t:${e.endTimeUnix}:R>`;
-        lines.push(en);
+
+      // End Line
+      if (opts.showEnd && !(isRaidHour && opts.showStart)) {
+        // End countdown triggers at the same time as start countdown
+        const useEndCountdown = (now - e.startTimeUnix * 1000) > -thresholdMs;
+        
+        if (useEndCountdown && fmt.endCountdown) {
+          lines.push(formatTimestamp(fmt.endCountdown, e.endText, e.endTimeUnix));
+        } else {
+          const template = fmt.endDate || "Ends {d} <R>";
+          let en = formatTimestamp(template, e.endText, e.endTimeUnix);
+          // Respect _endR flag for shrinking
+          if (!e._endR) en = en.replace(/ <[a-zA-Z]>/g, '');
+          lines.push(en);
+        }
       }
     }
     return lines.join('\n') + (e.extraInfo || '');
@@ -229,6 +270,9 @@ function buildSection(header, events, opts) {
     for (let i = events.length - 1; i >= 0; i--) {
       if (events[i].tbaStart && events[i].tbaEnd) continue;
       if (events[i].type === 'Raid Hour') continue;
+      // Skip if event is in countdown window
+      if (Date.now() - events[i].startTimeUnix * 1000 > -thresholdMs) continue; 
+      
       events[i]._endR = false;
       result = build();
       if (result.join('\n\n').length <= maxLen) return result;
@@ -239,6 +283,9 @@ function buildSection(header, events, opts) {
   if (showStart) {
     for (let i = events.length - 1; i >= 0; i--) {
       if (events[i].tbaStart && events[i].tbaEnd) continue;
+      // Skip if event is in countdown window
+      if (Date.now() - events[i].startTimeUnix * 1000 > -thresholdMs) continue;
+      
       events[i]._startR = false;
       result = build();
       if (result.join('\n\n').length <= maxLen) return result;

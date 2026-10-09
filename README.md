@@ -51,6 +51,37 @@ npm install
 
 **ignoreTypes:** Array of event types to ignore. Full list at util.eventTypesAll.
 
+**countdownThresholdHours:** How many hours before an event starts before switching to the countdown format.
+
+**formatting:** Object containing custom timestamp formats for start and end times. See the Format Options section below.
+
+
+## Format Options
+Use Discord's dynamic timestamps to automatically adjust to each user's local timezone.
+
+You can use a tool like [Hammertime](https://hammertime.cyou/en) to see available format characters.
+
+You only need to provide the format character inside angle brackets (e.g., `<R>`), and the bot will automatically insert the correct event timestamp. 
+
+**Available Options:**
+- **startDate:** Format used for the start time before the countdown threshold is reached.
+- **endDate:** Format used for the end time before the countdown threshold is reached.
+- **startCountdown:** Format used for the start time once the event is within the countdown threshold.
+- **endCountdown:** Format used for the end time once the event is within the countdown threshold.
+
+**Placeholders:**
+- `{d}`: The shortened date text (e.g., `Thu, Sep 17 @ 6 PM`).
+- `<X>`: A Discord timestamp tag, where `X` is the format character. Examples: `<R>` (Relative), `<F>` (Full date/time).
+
+**Example config.json section:**
+```json
+"formatting": {
+  "startDate": "Starts {d} <R>",
+  "endDate": "Ends {d} <R>",
+  "startCountdown": "Starts {d} <R>",
+  "endCountdown": "Ends {d} <R>"
+}
+```
 
 ## Usage
 - Start the bot in a console with `node events.js`

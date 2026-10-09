@@ -21,5 +21,12 @@
     "futureMaxBattle": "FFFF00",
     "futureOther": "CA7E00"
   },
-  "ignoreTypes": []
+  "ignoreTypes": [],
+  "countdownThresholdHours": 24,
+  "formatting": {
+    "startDate": "Starts {d} <R>",
+    "endDate": "Ends {d} <R>",
+    "startCountdown": "Starts {d} <R>",
+    "endCountdown": "Ends {d} <R>"
+  }
 }
